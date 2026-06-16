@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
 class TimerForegroundService : Service() {
 
     private lateinit var notificationController: NotificationController
+    private lateinit var feedback: SessionFeedback
 
     /** Скоуп службы для тикера; завершается в [onDestroy]. */
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -72,6 +73,7 @@ class TimerForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         notificationController = NotificationController(applicationContext)
+        feedback = SessionFeedback(applicationContext)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -201,17 +203,20 @@ class TimerForegroundService : Service() {
                     is TickResult.WorkCompleted -> {
                         accumulateWorkReward()
                         publish(result.state)
+                        feedback.onPhaseChange()
                         notificationController.notifyBreakStarted()
                         notificationController.updateTimerNotification(result.state)
                     }
                     is TickResult.BreakCompleted -> {
                         publish(result.state)
+                        feedback.onPhaseChange()
                         notificationController.notifyWorkStarted()
                         notificationController.updateTimerNotification(result.state)
                     }
                     is TickResult.SeriesCompleted -> {
                         accumulateWorkReward()
                         publish(result.state)
+                        feedback.onSeriesCompleted()
                         notificationController.notifySeriesCompleted(accumulatedXp, accumulatedGold)
                         // Серия завершена — отсчёт прекращаем и сворачиваем службу.
                         stopService()

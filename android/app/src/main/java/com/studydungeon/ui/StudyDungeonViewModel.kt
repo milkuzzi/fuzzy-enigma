@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.studydungeon.data.AppPreferences
 import com.studydungeon.data.FileHeroRepository
 import com.studydungeon.data.HeroRepository
 import com.studydungeon.domain.ApplySettingsResult
@@ -105,12 +106,32 @@ class StudyDungeonViewModel(
     /** Настройки блокировки телефона (режим + список приложений). */
     private val lockPreferences = LockPreferences(application)
 
+    /** Настройки приложения: сохранённые длительности Таймера и статистика. */
+    private val appPreferences = AppPreferences(application)
+
     init {
         // Загрузка сохранённого Героя (R10.2): при отсутствии/повреждении файла
         // репозиторий вернёт Героя по умолчанию (R10.3).
         viewModelScope.launch {
             val hero = repository.load()
             _uiState.update { it.copy(hero = hero) }
+        }
+
+        // Восстановление сохранённых длительностей Таймера и статистики (R10).
+        val savedWork = appPreferences.workDurationSec
+        val savedBreak = appPreferences.breakDurationSec
+        val savedTotal = appPreferences.totalPomodoros
+        _uiState.update {
+            it.copy(
+                timer = it.timer.copy(
+                    workDurationSec = savedWork,
+                    breakDurationSec = savedBreak,
+                    secondsLeft = savedWork,
+                    totalPomodoros = savedTotal
+                ),
+                todayPomodoros = appPreferences.todayCompletedPomodoros,
+                totalPomodoros = appPreferences.totalCompletedPomodoros
+            )
         }
 
         // Наблюдение за состоянием Таймера из фоновой службы (источник истины
@@ -162,6 +183,8 @@ class StudyDungeonViewModel(
             is ApplySettingsResult.Applied -> {
                 _uiState.update { it.copy(timer = result.state) }
                 rewardedPomodoros = 0
+                // Сохраняем выбранные длительности между запусками (R10.1).
+                appPreferences.saveTimerSettings(workSec, breakSec, total)
             }
             is ApplySettingsResult.Rejected ->
                 emitMessage("Нельзя менять настройки во время работы таймера")
@@ -361,8 +384,15 @@ class StudyDungeonViewModel(
             while (rewardedPomodoros < ts.completedPomodoros) {
                 hero = SessionEngine.applyWorkSuccessReward(hero) // R7.6, R8.1 (атомарно)
                 rewardedPomodoros++
+                appPreferences.recordCompletedPomodoro()
             }
             updateHero(hero) // R10.1
+            _uiState.update {
+                it.copy(
+                    todayPomodoros = appPreferences.todayCompletedPomodoros,
+                    totalPomodoros = appPreferences.totalCompletedPomodoros
+                )
+            }
         }
 
         val wasFocus = _uiState.value.focusMode

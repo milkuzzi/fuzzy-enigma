@@ -15,6 +15,8 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,7 +28,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.studydungeon.R
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -162,13 +166,43 @@ fun LockSettingsContent(modifier: Modifier = Modifier) {
                     .sortedBy { it.second.lowercase() }
             }
 
+            var query by remember { mutableStateOf("") }
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(stringResource(R.string.lock_search_hint)) },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        TextButton(onClick = { query = "" }) {
+                            Text(stringResource(R.string.lock_search_clear))
+                        }
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Dungeon.Parchment,
+                    unfocusedTextColor = Dungeon.Parchment,
+                    focusedBorderColor = Dungeon.Gold,
+                    unfocusedBorderColor = Dungeon.GoldTrim,
+                    cursorColor = Dungeon.GoldBright,
+                    focusedPlaceholderColor = Dungeon.ParchmentMuted,
+                    unfocusedPlaceholderColor = Dungeon.ParchmentMuted
+                )
+            )
+
+            val filteredApps = remember(apps, query) {
+                if (query.isBlank()) apps
+                else apps.filter { it.second.contains(query.trim(), ignoreCase = true) }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 320.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                apps.forEach { (pkg, label) ->
+                filteredApps.forEach { (pkg, label) ->
                     val isBlocked = pkg in blocked
                     Row(
                         modifier = Modifier
@@ -200,7 +234,7 @@ fun LockSettingsContent(modifier: Modifier = Modifier) {
                         )
                     }
                 }
-                if (apps.isEmpty()) {
+                if (filteredApps.isEmpty()) {
                     Text(
                         text = "Список приложений пуст.",
                         style = MaterialTheme.typography.bodySmall,

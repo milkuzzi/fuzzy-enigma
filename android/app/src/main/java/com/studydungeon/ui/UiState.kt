@@ -39,7 +39,9 @@ data class UiState(
     val focusMode: Boolean = false,
     val settingsVisible: Boolean = true,
     val shopVisible: Boolean = true,
-    val inventoryVisible: Boolean = true
+    val inventoryVisible: Boolean = true,
+    val todayPomodoros: Int = 0,
+    val totalPomodoros: Int = 0
 ) {
     /**
      * Активирует Режим_Фокуса. Намеренная видимость секций сохраняется без

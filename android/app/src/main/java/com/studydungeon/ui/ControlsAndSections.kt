@@ -11,23 +11,31 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.studydungeon.data.AppPreferences
 import com.studydungeon.domain.Hero
 import com.studydungeon.domain.RunState
 import com.studydungeon.domain.ShopCatalog
@@ -87,6 +95,32 @@ fun SessionControls(
     val paused = timer.runState == RunState.PAUSED
     val stopped = timer.runState == RunState.STOPPED
 
+    var showGiveUpConfirm by remember { mutableStateOf(false) }
+    var showNewSeriesConfirm by remember { mutableStateOf(false) }
+
+    if (showGiveUpConfirm) {
+        ConfirmDialog(
+            title = stringResource(R.string.confirm_give_up_title),
+            text = stringResource(R.string.confirm_give_up_text),
+            onConfirm = {
+                showGiveUpConfirm = false
+                onGiveUp()
+            },
+            onDismiss = { showGiveUpConfirm = false }
+        )
+    }
+    if (showNewSeriesConfirm) {
+        ConfirmDialog(
+            title = stringResource(R.string.confirm_new_series_title),
+            text = stringResource(R.string.confirm_new_series_text),
+            onConfirm = {
+                showNewSeriesConfirm = false
+                onStartNewSeries()
+            },
+            onDismiss = { showNewSeriesConfirm = false }
+        )
+    }
+
     DungeonPanel(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -103,14 +137,14 @@ fun SessionControls(
                     enabled = !running,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(text = if (paused) "Продолжить" else "Старт")
+                    Text(text = stringResource(if (paused) R.string.action_resume else R.string.action_start))
                 }
                 FilledTonalButton(
                     onClick = onPause,
                     enabled = running,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(text = "Пауза")
+                    Text(text = stringResource(R.string.action_pause))
                 }
             }
             Row(
@@ -118,18 +152,18 @@ fun SessionControls(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = onGiveUp,
+                    onClick = { showGiveUpConfirm = true },
                     enabled = running || paused,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(text = "Сдаться")
+                    Text(text = stringResource(R.string.action_give_up))
                 }
                 OutlinedButton(
-                    onClick = onStartNewSeries,
+                    onClick = { showNewSeriesConfirm = true },
                     enabled = stopped,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(text = "Новая серия")
+                    Text(text = stringResource(R.string.action_new_series))
                 }
             }
         }
@@ -225,24 +259,29 @@ fun SettingsSectionContent(
         mutableIntStateOf(timer.totalPomodoros.coerceIn(POMODORO_COUNT_RANGE))
     }
 
+    val context = LocalContext.current
+    val appPrefs = remember { AppPreferences(context) }
+    var soundEnabled by remember { mutableStateOf(appPrefs.soundEnabled) }
+    var vibrationEnabled by remember { mutableStateOf(appPrefs.vibrationEnabled) }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         NumberStepper(
-            label = "Работа, мин",
+            label = stringResource(R.string.settings_work_minutes),
             value = workMinutes,
             range = WORK_MINUTES_RANGE,
             onValueChange = { workMinutes = it }
         )
         NumberStepper(
-            label = "Отдых, мин",
+            label = stringResource(R.string.settings_break_minutes),
             value = breakMinutes,
             range = BREAK_MINUTES_RANGE,
             onValueChange = { breakMinutes = it }
         )
         NumberStepper(
-            label = "Помидорки",
+            label = stringResource(R.string.settings_pomodoros),
             value = pomodoros,
             range = POMODORO_COUNT_RANGE,
             onValueChange = { pomodoros = it }
@@ -258,9 +297,86 @@ fun SettingsSectionContent(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = "Применить")
+            Text(text = stringResource(R.string.action_apply))
         }
+
+        HorizontalDivider(color = Dungeon.GoldTrim.copy(alpha = 0.3f))
+        ToggleRow(
+            label = stringResource(R.string.settings_sound),
+            checked = soundEnabled,
+            onCheckedChange = {
+                soundEnabled = it
+                appPrefs.soundEnabled = it
+            }
+        )
+        ToggleRow(
+            label = stringResource(R.string.settings_vibration),
+            checked = vibrationEnabled,
+            onCheckedChange = {
+                vibrationEnabled = it
+                appPrefs.vibrationEnabled = it
+            }
+        )
     }
+}
+
+/** Строка с подписью и переключателем в стиле подземелья. */
+@Composable
+private fun ToggleRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Dungeon.Parchment
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Dungeon.GoldBright,
+                checkedTrackColor = Dungeon.Gold,
+                uncheckedThumbColor = Dungeon.ParchmentMuted,
+                uncheckedTrackColor = Dungeon.StoneTop
+            )
+        )
+    }
+}
+
+/** Диалог подтверждения деструктивного действия (сдача / новая серия). */
+@Composable
+private fun ConfirmDialog(
+    title: String,
+    text: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Dungeon.StoneTop,
+        titleContentColor = Dungeon.GoldBright,
+        textContentColor = Dungeon.Parchment,
+        title = { Text(text = title) },
+        text = { Text(text = text) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(text = stringResource(R.string.confirm_ok), color = Dungeon.GoldBright)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.confirm_cancel), color = Dungeon.ParchmentMuted)
+            }
+        }
+    )
 }
 
 /**
@@ -328,7 +444,7 @@ fun ShopSectionContent(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "Эффект предмета применяется сразу при покупке.",
+            text = stringResource(R.string.shop_effect_hint),
             style = MaterialTheme.typography.labelMedium,
             color = Dungeon.ParchmentMuted
         )
@@ -341,7 +457,7 @@ fun ShopSectionContent(
             ) {
                 PixelIcon(
                     resId = shopItemIcon(item.id),
-                    contentDescription = null,
+                    contentDescription = item.displayName,
                     size = 40.dp
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -365,7 +481,7 @@ fun ShopSectionContent(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${item.cost} золота",
+                            text = stringResource(R.string.shop_cost, item.cost),
                             style = MaterialTheme.typography.labelMedium,
                             color = Dungeon.GoldTrim
                         )
@@ -376,7 +492,7 @@ fun ShopSectionContent(
                     onClick = { onPurchase(item) },
                     enabled = hero.gold >= item.cost
                 ) {
-                    Text(text = "Купить")
+                    Text(text = stringResource(R.string.action_buy))
                 }
             }
         }
@@ -403,13 +519,13 @@ fun InventorySectionContent(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = "Купленные предметы действуют сразу; здесь — история покупок.",
+            text = stringResource(R.string.inventory_hint),
             style = MaterialTheme.typography.labelMedium,
             color = Dungeon.ParchmentMuted
         )
         if (hero.inventory.isEmpty()) {
             Text(
-                text = "Инвентарь пуст",
+                text = stringResource(R.string.inventory_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Dungeon.ParchmentMuted
             )
@@ -432,6 +548,68 @@ fun InventorySectionContent(
         }
     }
 }
+
+// endregion
+
+// region Statistics
+
+/**
+ * Панель дневной статистики: число завершённых Помидорок сегодня и за всё время.
+ * Данные приходят сверху из [UiState], панель остаётся stateless.
+ */
+@Composable
+fun StatisticsPanel(
+    today: Int,
+    total: Int,
+    modifier: Modifier = Modifier
+) {
+    DungeonPanel(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.section_stats),
+                style = MaterialTheme.typography.titleMedium,
+                color = Dungeon.GoldBright
+            )
+            StatRow(label = stringResource(R.string.stats_today), value = today)
+            StatRow(label = stringResource(R.string.stats_total), value = total)
+        }
+    }
+}
+
+@Composable
+private fun StatRow(label: String, value: Int, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PixelIcon(
+                resId = R.drawable.ic_hourglass,
+                contentDescription = null,
+                size = 18.dp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Dungeon.Parchment
+            )
+        }
+        Text(
+            text = value.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            color = Dungeon.GoldBright
+        )
+    }
+}
+
+// endregion
 
 /**
  * Сопоставление идентификатора товара Магазина с пиксель-арт спрайтом.

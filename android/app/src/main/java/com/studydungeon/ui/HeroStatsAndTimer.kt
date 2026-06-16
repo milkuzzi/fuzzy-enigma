@@ -39,8 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.annotation.StringRes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.studydungeon.domain.Debuff
@@ -99,7 +101,7 @@ fun HeroStatsPanel(
                 ) {
                     PixelIcon(
                         resId = heroPortraitForLevel(hero.level),
-                        contentDescription = "Портрет Героя",
+                        contentDescription = stringResource(R.string.hero_portrait_cd),
                         size = 70.dp
                     )
                 }
@@ -111,12 +113,12 @@ fun HeroStatsPanel(
                         color = Dungeon.GoldBright
                     )
                     Text(
-                        text = "Уровень ${hero.level}",
+                        text = stringResource(R.string.hero_level, hero.level),
                         style = MaterialTheme.typography.titleSmall,
                         color = Dungeon.Parchment
                     )
                     Text(
-                        text = heroRankForLevel(hero.level),
+                        text = stringResource(heroRankForLevel(hero.level)),
                         style = MaterialTheme.typography.labelMedium,
                         color = Dungeon.GoldTrim
                     )
@@ -125,7 +127,7 @@ fun HeroStatsPanel(
 
             // Индикатор Опыта (R14.1).
             StatBar(
-                label = "Опыт",
+                label = stringResource(R.string.stat_xp),
                 valueText = "${hero.currentXp} / ${hero.xpToNext}",
                 progress = ratio(hero.currentXp, hero.xpToNext),
                 color = Dungeon.Xp,
@@ -134,7 +136,7 @@ fun HeroStatsPanel(
 
             // Индикатор Здоровья (R14.1).
             StatBar(
-                label = "Здоровье",
+                label = stringResource(R.string.stat_health),
                 valueText = "${hero.currentHp} / ${hero.maxHp}",
                 progress = ratio(hero.currentHp, hero.maxHp),
                 color = HealthColor,
@@ -149,7 +151,7 @@ fun HeroStatsPanel(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     PixelIcon(
                         resId = R.drawable.ic_gold,
-                        contentDescription = "Золото",
+                        contentDescription = stringResource(R.string.stat_gold),
                         size = 22.dp
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -184,7 +186,7 @@ fun DebuffIndicator(
         onClick = {},
         enabled = false,
         modifier = modifier,
-        label = { Text(text = debuffLabel(debuff)) },
+        label = { Text(text = stringResource(debuffLabel(debuff))) },
         colors = AssistChipDefaults.assistChipColors(
             disabledLabelColor = MaterialTheme.colorScheme.onErrorContainer,
             disabledContainerColor = MaterialTheme.colorScheme.errorContainer
@@ -265,7 +267,7 @@ fun TimerDisplay(
             ) {
                 // Метка текущей фазы (R7.2, R14.2).
                 Text(
-                    text = phaseLabel(timer.phase),
+                    text = stringResource(phaseLabel(timer.phase)),
                     style = MaterialTheme.typography.titleMedium,
                     color = if (timer.phase == Phase.WORK) {
                         Dungeon.Gold
@@ -290,13 +292,17 @@ fun TimerDisplay(
 
                 // Счётчик Помидорок Серии (R8.2, R14.2).
                 Text(
-                    text = "Помидорки: ${timer.completedPomodoros} / ${timer.totalPomodoros}",
+                    text = stringResource(
+                        R.string.pomodoro_counter,
+                        timer.completedPomodoros,
+                        timer.totalPomodoros
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Dungeon.Parchment
                 )
 
                 Text(
-                    text = runStateLabel(timer.runState),
+                    text = stringResource(runStateLabel(timer.runState)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -344,7 +350,7 @@ fun SuccessAnimation(
                     size = 56.dp
                 )
                 Text(
-                    text = "Помидорка завершена!",
+                    text = stringResource(R.string.pomodoro_done),
                     style = MaterialTheme.typography.titleMedium,
                     color = Dungeon.GoldBright
                 )
@@ -383,7 +389,7 @@ fun AnimatedHourglass(
     )
     PixelIcon(
         resId = R.drawable.ic_hourglass,
-        contentDescription = null,
+        contentDescription = stringResource(R.string.cd_hourglass),
         size = size,
         modifier = modifier.graphicsLayer { rotationZ = if (running) angle else 0f }
     )
@@ -403,11 +409,12 @@ fun heroPortraitForLevel(level: Int): Int = when {
     else -> R.drawable.hero_portrait
 }
 
-/** Звание Героя по Уровню (отображается под уровнем в панели характеристик). */
-fun heroRankForLevel(level: Int): String = when {
-    level >= 6 -> "Легендарный герой"
-    level >= 3 -> "Бывалый искатель"
-    else -> "Новичок"
+/** Звание Героя по Уровню (строковый ресурс, отображается под уровнем). */
+@StringRes
+fun heroRankForLevel(level: Int): Int = when {
+    level >= 6 -> R.string.rank_legendary
+    level >= 3 -> R.string.rank_seasoned
+    else -> R.string.rank_novice
 }
 
 /** Безопасное отношение для прогресс-бара в диапазоне [0f, 1f]. */
@@ -416,25 +423,28 @@ private fun ratio(value: Int, total: Int): Float {
     return (value.toFloat() / total.toFloat()).coerceIn(0f, 1f)
 }
 
-/** Русскоязычная метка фазы Таймера. */
-private fun phaseLabel(phase: Phase): String = when (phase) {
-    Phase.WORK -> "Фаза работы"
-    Phase.BREAK -> "Фаза отдыха"
+/** Строковый ресурс метки фазы Таймера. */
+@StringRes
+private fun phaseLabel(phase: Phase): Int = when (phase) {
+    Phase.WORK -> R.string.phase_work
+    Phase.BREAK -> R.string.phase_break
 }
 
-/** Русскоязычная метка состояния выполнения Таймера. */
-private fun runStateLabel(runState: RunState): String = when (runState) {
-    RunState.STOPPED -> "Остановлен"
-    RunState.RUNNING -> "Идёт"
-    RunState.PAUSED -> "Пауза"
+/** Строковый ресурс метки состояния выполнения Таймера. */
+@StringRes
+private fun runStateLabel(runState: RunState): Int = when (runState) {
+    RunState.STOPPED -> R.string.run_stopped
+    RunState.RUNNING -> R.string.run_running
+    RunState.PAUSED -> R.string.run_paused
 }
 
-/** Русскоязычная метка Дебаффа для индикатора (R14.6). */
-private fun debuffLabel(debuff: Debuff): String = when (debuff) {
-    Debuff.NONE -> ""
-    Debuff.TIRED -> "Усталость"
-    Debuff.DISTRACTED -> "Рассеянность"
-    Debuff.WEAK -> "Слабость"
+/** Строковый ресурс метки Дебаффа для индикатора (R14.6, рендерится только при != NONE). */
+@StringRes
+private fun debuffLabel(debuff: Debuff): Int = when (debuff) {
+    Debuff.NONE -> R.string.debuff_weak
+    Debuff.TIRED -> R.string.debuff_tired
+    Debuff.DISTRACTED -> R.string.debuff_distracted
+    Debuff.WEAK -> R.string.debuff_weak
 }
 
 /** Цвет индикатора Здоровья. */

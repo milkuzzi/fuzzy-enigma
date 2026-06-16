@@ -15,8 +15,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.studydungeon.R
 import com.studydungeon.domain.Debuff
 import com.studydungeon.domain.Hero
 import com.studydungeon.domain.Phase
@@ -98,8 +100,14 @@ fun StudyDungeonScreen(
         // Режиме_Фокуса секции скрыты целиком (R13.6): видимость берётся из
         // uiState, переключение — через onToggleSection.
         if (!uiState.focusMode) {
+            // Статистика завершённых Помидорок (сегодня / всего).
+            StatisticsPanel(
+                today = uiState.todayPomodoros,
+                total = uiState.totalPomodoros
+            )
+
             CollapsibleSection(
-                title = "Настройки",
+                title = stringResource(R.string.section_settings),
                 expanded = uiState.isSectionVisible(Section.SETTINGS),
                 onToggle = { onToggleSection(Section.SETTINGS) }
             ) {
@@ -113,7 +121,7 @@ fun StudyDungeonScreen(
             }
 
             CollapsibleSection(
-                title = "Магазин",
+                title = stringResource(R.string.section_shop),
                 expanded = uiState.isSectionVisible(Section.SHOP),
                 onToggle = { onToggleSection(Section.SHOP) }
             ) {
@@ -124,7 +132,7 @@ fun StudyDungeonScreen(
             }
 
             CollapsibleSection(
-                title = "Инвентарь",
+                title = stringResource(R.string.section_inventory),
                 expanded = uiState.isSectionVisible(Section.INVENTORY),
                 onToggle = { onToggleSection(Section.INVENTORY) }
             ) {
