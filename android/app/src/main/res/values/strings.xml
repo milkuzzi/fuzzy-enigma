@@ -46,6 +46,8 @@
     <string name="action_new_series">Новая серия</string>
     <string name="action_apply">Применить</string>
     <string name="action_buy">Купить</string>
+    <string name="action_use">Использовать</string>
+    <string name="series_already_new">Серия уже новая — прогресс нулевой.</string>
 
     <!-- Диалоги подтверждения -->
     <string name="confirm_give_up_title">Сдаться?</string>
@@ -61,11 +63,14 @@
     <string name="settings_pomodoros">Помидорки</string>
     <string name="settings_sound">Звук на смене фаз</string>
     <string name="settings_vibration">Вибрация на смене фаз</string>
+    <string name="settings_theme">Тема оформления</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="theme_light">Светлая</string>
 
     <!-- Магазин и инвентарь -->
-    <string name="shop_effect_hint">Эффект предмета применяется сразу при покупке.</string>
+    <string name="shop_effect_hint">Купленные предметы попадают в инвентарь — примените их кнопкой «Использовать».</string>
     <string name="shop_cost">%1$d золота</string>
-    <string name="inventory_hint">Купленные предметы действуют сразу; здесь — история покупок.</string>
+    <string name="inventory_hint">Предметы — расходники: нажмите «Использовать», чтобы применить эффект.</string>
     <string name="inventory_empty">Инвентарь пуст</string>
 
     <!-- Панель героя -->
@@ -86,6 +91,10 @@
     <string name="run_paused">Пауза</string>
     <string name="pomodoro_counter">Помидорки: %1$d / %2$d</string>
     <string name="pomodoro_done">Помидорка завершена!</string>
+    <string name="series_label">Серия</string>
+    <string name="series_progress">Помидорка %1$d из %2$d</string>
+    <string name="series_not_started">Серия не запущена</string>
+    <string name="series_completed">Серия завершена</string>
     <string name="cd_hourglass">Песочные часы таймера</string>
 
     <!-- Дебаффы -->
@@ -96,8 +105,24 @@
     <!-- Статистика -->
     <string name="stats_today">Помидорок сегодня</string>
     <string name="stats_total">Всего помидорок</string>
+    <string name="stats_streak">Текущая серия дней</string>
+    <string name="stats_best_streak">Лучшая серия дней</string>
+    <string name="stats_chart_days">За последние 7 дней</string>
+    <string name="stats_chart_weeks">По неделям</string>
+    <string name="stats_week_current">Эта</string>
 
     <!-- Блокировка: поиск приложений -->
     <string name="lock_search_hint">Поиск приложений</string>
     <string name="lock_search_clear">Очистить</string>
+
+    <!-- Онбординг -->
+    <string name="onboarding_skip">Пропустить</string>
+    <string name="onboarding_next">Далее</string>
+    <string name="onboarding_start">Начать</string>
+    <string name="onboarding_title_1">Добро пожаловать в подземелье</string>
+    <string name="onboarding_text_1">Учитесь помидорками: запускайте серию, фокусируйтесь и прокачивайте героя за каждую завершённую помидорку.</string>
+    <string name="onboarding_title_2">Магазин и предметы</string>
+    <string name="onboarding_text_2">Тратьте золото на зелья и свитки. Купленные предметы попадают в инвентарь — применяйте их кнопкой «Использовать».</string>
+    <string name="onboarding_title_3">Блокировка телефона</string>
+    <string name="onboarding_text_3">Включите полную блокировку или блокировку отдельных приложений в настройках, чтобы не отвлекаться во время фокуса.</string>
 </resources>

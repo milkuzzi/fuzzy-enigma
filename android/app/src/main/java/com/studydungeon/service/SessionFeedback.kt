@@ -7,20 +7,20 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
-import com.studydungeon.data.AppPreferences
+import com.studydungeon.data.SettingsStore
 
 /**
  * Звуковая и тактильная обратная связь на смену фаз Таймера и завершение Серии.
  *
- * Подчиняется пользовательским переключателям [AppPreferences.soundEnabled] и
- * [AppPreferences.vibrationEnabled] (читаются при каждом событии, чтобы
- * изменения настроек применялись немедленно). Любые ошибки воспроизведения
- * молча игнорируются — это вспомогательный эффект, он не должен «ронять» сервис.
+ * Подчиняется пользовательским переключателям звука/вибрации из [SettingsStore]
+ * (читаются при каждом событии, чтобы изменения настроек применялись
+ * немедленно). Любые ошибки воспроизведения молча игнорируются — это
+ * вспомогательный эффект, он не должен «ронять» сервис.
  */
 class SessionFeedback(context: Context) {
 
     private val appContext = context.applicationContext
-    private val prefs = AppPreferences(appContext)
+    private val settings = SettingsStore(appContext)
 
     /** Обратная связь на смену фазы (работа↔отдых): короткая вибрация + звук. */
     fun onPhaseChange() = play(longArrayOf(0, 200))
@@ -29,8 +29,8 @@ class SessionFeedback(context: Context) {
     fun onSeriesCompleted() = play(longArrayOf(0, 150, 120, 150, 120, 300))
 
     private fun play(pattern: LongArray) {
-        if (prefs.vibrationEnabled) vibrate(pattern)
-        if (prefs.soundEnabled) playSound()
+        if (settings.vibrationEnabledBlocking()) vibrate(pattern)
+        if (settings.soundEnabledBlocking()) playSound()
     }
 
     private fun vibrate(pattern: LongArray) {

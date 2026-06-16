@@ -42,21 +42,82 @@ import com.studydungeon.R
  * которыми пользуются экраны и панели. Цвета подобраны под пиксель-арт спрайты
  * в `res/drawable-nodpi` (камень, золото, кровь, опыт-кристалл).
  */
-object Dungeon {
-    // Акцентные цвета (согласованы со спрайтами).
-    val Gold = Color(0xFFE0A33B)
-    val GoldTrim = Color(0xFFC9A24B)
-    val GoldBright = Color(0xFFF1CE7A)
-    val Health = Color(0xFFC8412E)
-    val Xp = Color(0xFF49B6E0)
-    val Teal = Color(0xFF54BBA8)
-    val Parchment = Color(0xFFEAD9B0)
-    val ParchmentMuted = Color(0xFFB9A479)
+/**
+ * Декоративная палитра подземелья. Существует в двух вариантах — тёмном
+ * ([DarkDungeonPalette]) и светлом ([LightDungeonPalette]); активный вариант
+ * выбирается темой и читается через [Dungeon].
+ */
+data class DungeonPalette(
+    val gold: Color,
+    val goldTrim: Color,
+    val goldBright: Color,
+    val health: Color,
+    val xp: Color,
+    val teal: Color,
+    val parchment: Color,
+    val parchmentMuted: Color,
+    val stoneTop: Color,
+    val stoneBottom: Color,
+    val panelEdgeDark: Color,
+    val screenBackground: Color
+)
 
-    // Каменные поверхности панелей.
-    val StoneTop = Color(0xFF36281A)
-    val StoneBottom = Color(0xFF1C140D)
-    val PanelEdgeDark = Color(0xFF0C0805)
+/** Тёмная палитра «подземелья» (по умолчанию). */
+val DarkDungeonPalette = DungeonPalette(
+    gold = Color(0xFFE0A33B),
+    goldTrim = Color(0xFFC9A24B),
+    goldBright = Color(0xFFF1CE7A),
+    health = Color(0xFFC8412E),
+    xp = Color(0xFF49B6E0),
+    teal = Color(0xFF54BBA8),
+    parchment = Color(0xFFEAD9B0),
+    parchmentMuted = Color(0xFFB9A479),
+    stoneTop = Color(0xFF36281A),
+    stoneBottom = Color(0xFF1C140D),
+    panelEdgeDark = Color(0xFF0C0805),
+    screenBackground = Color(0xFF140F0A)
+)
+
+/** Светлая «пергаментная» палитра: тёмный текст на светлых панелях. */
+val LightDungeonPalette = DungeonPalette(
+    gold = Color(0xFFB9791B),
+    goldTrim = Color(0xFFA9833A),
+    goldBright = Color(0xFF8A5E12),
+    health = Color(0xFFB5341F),
+    xp = Color(0xFF2E7FA6),
+    teal = Color(0xFF2E8C79),
+    parchment = Color(0xFF3A2E1C),
+    parchmentMuted = Color(0xFF6F5C3C),
+    stoneTop = Color(0xFFF6ECD3),
+    stoneBottom = Color(0xFFE7D6B2),
+    panelEdgeDark = Color(0xFFBFA468),
+    screenBackground = Color(0xFFF3E7CC)
+)
+
+object Dungeon {
+    /**
+     * Активная палитра. Переключается темой ([StudyDungeonTheme]) до композиции
+     * содержимого, поэтому акцентные цвета (включая используемые в DrawScope)
+     * читаются как обычные свойства без CompositionLocal.
+     */
+    @Volatile
+    var palette: DungeonPalette = DarkDungeonPalette
+
+    // Акцентные цвета (согласованы со спрайтами), берутся из активной палитры.
+    val Gold get() = palette.gold
+    val GoldTrim get() = palette.goldTrim
+    val GoldBright get() = palette.goldBright
+    val Health get() = palette.health
+    val Xp get() = palette.xp
+    val Teal get() = palette.teal
+    val Parchment get() = palette.parchment
+    val ParchmentMuted get() = palette.parchmentMuted
+
+    // Поверхности панелей.
+    val StoneTop get() = palette.stoneTop
+    val StoneBottom get() = palette.stoneBottom
+    val PanelEdgeDark get() = palette.panelEdgeDark
+    val ScreenBackground get() = palette.screenBackground
 
     // Шрифты с поддержкой кириллицы (Ruslan Display, Press Start 2P) и
     // латинский декоративный (MedievalSharp) для названия приложения.
@@ -168,14 +229,16 @@ fun DungeonBackground(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
+        val scrim = if (Dungeon.palette == LightDungeonPalette) {
+            // Светлая тема: пергаментная вуаль вместо тёмной.
+            listOf(Color(0xF2F3E7CC), Color(0xE6EFE0C2), Color(0xF7F3E7CC))
+        } else {
+            listOf(Color(0xCC0B0805), Color(0x99110B07), Color(0xD60B0805))
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xCC0B0805), Color(0x99110B07), Color(0xD60B0805))
-                    )
-                )
+                .background(Brush.verticalGradient(scrim))
         )
     }
 }

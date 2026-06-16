@@ -45,44 +45,66 @@ object ShopCatalog {
             displayName = "Малое зелье",
             description = "Восстанавливает 30 единиц здоровья героя.",
             cost = 20
-        ),   // R5.3 -> heal(30)
+        ),   // эффект при использовании -> heal(30)
         ShopItem(
             id = "scroll",
             displayName = "Свиток мудрости",
-            description = "Мгновенно даёт 50 опыта герою.",
+            description = "Даёт 50 опыта герою.",
             cost = 50
-        ) // R5.4 -> addReward(50, 0)
+        ) // эффект при использовании -> addReward(50, 0)
     )
 
     /**
      * Покупка [item] Героем [hero].
      *
-     * Сначала применяется списание Золота через [HeroEngine.buyItem]
-     * (с добавлением [ShopItem.displayName] в Инвентарь). Только при успешной
-     * покупке (`success == true`) к итоговому Герою применяется эффект предмета:
-     * - "potion" → [HeroEngine.heal] на 30 единиц Здоровья (R5.3);
-     * - "scroll" → [HeroEngine.addReward] на 50 опыта и 0 золота, включая
-     *   возможные повышения уровня (R5.4).
-     *
-     * При неудачной покупке (недостаточно Золота) Золото и Инвентарь Героя не
-     * изменяются и эффект не применяется.
+     * Списывает стоимость через [HeroEngine.buyItem] и кладёт **идентификатор**
+     * предмета в Инвентарь как расходник. Эффект предмета при покупке больше не
+     * применяется — он срабатывает при использовании ([useItem]). При недостатке
+     * Золота Золото и Инвентарь не изменяются.
      *
      * @param hero исходное состояние Героя
      * @param item покупаемый предмет каталога
      * @return [BuyResult] с флагом успеха и итоговым [Hero]
-     *
-     * Requirements: 5.3, 5.4
      */
-    fun purchase(hero: Hero, item: ShopItem): BuyResult {
-        val buyResult = HeroEngine.buyItem(hero, item.displayName, item.cost)
-        if (!buyResult.success) {
-            return buyResult
+    fun purchase(hero: Hero, item: ShopItem): BuyResult =
+        HeroEngine.buyItem(hero, item.id, item.cost)
+
+    /**
+     * Сопоставляет запись Инвентаря (идентификатор или старое отображаемое имя —
+     * для совместимости с сохранениями прежних версий) с предметом каталога.
+     */
+    fun itemForEntry(entry: String): ShopItem? =
+        items.firstOrNull { it.id == entry || it.displayName == entry }
+
+    /** Отображаемое имя записи Инвентаря (по каталогу либо как есть). */
+    fun displayNameForEntry(entry: String): String =
+        itemForEntry(entry)?.displayName ?: entry
+
+    /** Описание эффекта записи Инвентаря, либо null если предмет неизвестен. */
+    fun descriptionForEntry(entry: String): String? =
+        itemForEntry(entry)?.description
+
+    /**
+     * Использует предмет Инвентаря по индексу [index]: применяет его эффект к
+     * Герою и удаляет одну единицу предмета из Инвентаря (расходник).
+     *
+     * - "potion" → [HeroEngine.heal] на 30 единиц Здоровья;
+     * - "scroll" → [HeroEngine.addReward] на 50 опыта (с учётом повышений уровня);
+     * - неизвестный предмет просто удаляется без эффекта.
+     *
+     * При выходе [index] за границы Инвентаря Герой возвращается без изменений.
+     *
+     * @return новый [Hero] после применения эффекта и расхода предмета.
+     */
+    fun useItem(hero: Hero, index: Int): Hero {
+        if (index !in hero.inventory.indices) return hero
+        val entry = hero.inventory[index]
+        val remaining = hero.inventory.toMutableList().apply { removeAt(index) }
+        val consumed = hero.copy(inventory = remaining)
+        return when (itemForEntry(entry)?.id) {
+            "potion" -> HeroEngine.heal(consumed, 30)
+            "scroll" -> HeroEngine.addReward(consumed, 50, 0)
+            else -> consumed
         }
-        val heroWithEffect = when (item.id) {
-            "potion" -> HeroEngine.heal(buyResult.hero, 30)
-            "scroll" -> HeroEngine.addReward(buyResult.hero, 50, 0)
-            else -> buyResult.hero
-        }
-        return BuyResult(success = true, hero = heroWithEffect)
     }
 }

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -67,7 +69,9 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            StudyDungeonTheme {
+            val theme by viewModel.themeChoice.collectAsState()
+            val onboardingDone by viewModel.onboardingCompleted.collectAsState()
+            StudyDungeonTheme(theme = theme) {
                 val snackbarHostState = remember { SnackbarHostState() }
                 Box(modifier = Modifier.fillMaxSize()) {
                     // Каменный фон подземелья под всем интерфейсом (R14).
@@ -82,6 +86,11 @@ class MainActivity : ComponentActivity() {
                             snackbarHostState = snackbarHostState,
                             modifier = Modifier.padding(innerPadding)
                         )
+                    }
+                    // Онбординг при первом запуске: показываем поверх UI, пока флаг
+                    // явно не выставлен в true (null — состояние ещё загружается).
+                    if (onboardingDone == false) {
+                        OnboardingScreen(onFinish = viewModel::completeOnboarding)
                     }
                 }
             }

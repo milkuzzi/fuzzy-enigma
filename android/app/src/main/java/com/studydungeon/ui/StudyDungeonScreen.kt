@@ -51,6 +51,7 @@ fun StudyDungeonScreen(
     onStartNewSeries: () -> Unit = {},
     onApplySettings: (workSec: Int, breakSec: Int, total: Int) -> Unit = { _, _, _ -> },
     onPurchase: (com.studydungeon.domain.ShopItem) -> Unit = {},
+    onUseItem: (index: Int) -> Unit = {},
     onToggleSection: (Section) -> Unit = {}
 ) {
     // Локальное состояние анимации успеха: поднимается при росте числа
@@ -100,11 +101,8 @@ fun StudyDungeonScreen(
         // Режиме_Фокуса секции скрыты целиком (R13.6): видимость берётся из
         // uiState, переключение — через onToggleSection.
         if (!uiState.focusMode) {
-            // Статистика завершённых Помидорок (сегодня / всего).
-            StatisticsPanel(
-                today = uiState.todayPomodoros,
-                total = uiState.totalPomodoros
-            )
+            // Статистика: счётчики, серии (streak) и графики по дням/неделям.
+            StatisticsPanel(stats = uiState.stats)
 
             CollapsibleSection(
                 title = stringResource(R.string.section_settings),
@@ -136,7 +134,10 @@ fun StudyDungeonScreen(
                 expanded = uiState.isSectionVisible(Section.INVENTORY),
                 onToggle = { onToggleSection(Section.INVENTORY) }
             ) {
-                InventorySectionContent(hero = uiState.hero)
+                InventorySectionContent(
+                    hero = uiState.hero,
+                    onUse = onUseItem
+                )
             }
         }
     }
@@ -176,6 +177,7 @@ fun StudyDungeonScreen(
         onStartNewSeries = viewModel::startNewSeries,
         onApplySettings = viewModel::applySettings,
         onPurchase = viewModel::purchase,
+        onUseItem = viewModel::useItem,
         onToggleSection = viewModel::toggleSection
     )
 }

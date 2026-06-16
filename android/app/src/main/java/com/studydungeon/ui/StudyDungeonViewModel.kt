@@ -5,9 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.studydungeon.data.AppPreferences
+import com.studydungeon.R
 import com.studydungeon.data.FileHeroRepository
 import com.studydungeon.data.HeroRepository
+import com.studydungeon.data.SettingsStore
+import com.studydungeon.data.ThemeChoice
 import com.studydungeon.domain.ApplySettingsResult
 import com.studydungeon.domain.Hero
 import com.studydungeon.domain.HeroEngine
@@ -28,9 +30,12 @@ import com.studydungeon.service.TimerForegroundService
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -106,8 +111,16 @@ class StudyDungeonViewModel(
     /** Настройки блокировки телефона (режим + список приложений). */
     private val lockPreferences = LockPreferences(application)
 
-    /** Настройки приложения: сохранённые длительности Таймера и статистика. */
-    private val appPreferences = AppPreferences(application)
+    /** Типобезопасные настройки приложения и статистика (DataStore). */
+    private val settingsStore = SettingsStore(application)
+
+    /** Выбранная тема оформления (наблюдается Activity для применения темы). */
+    val themeChoice: StateFlow<ThemeChoice> =
+        settingsStore.themeChoice.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeChoice.DARK)
+
+    /** Признак завершённого онбординга (Activity показывает онбординг, если false). */
+    val onboardingCompleted: StateFlow<Boolean?> =
+        settingsStore.onboardingCompleted.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     init {
         // Загрузка сохранённого Героя (R10.2): при отсутствии/повреждении файла
@@ -117,21 +130,34 @@ class StudyDungeonViewModel(
             _uiState.update { it.copy(hero = hero) }
         }
 
-        // Восстановление сохранённых длительностей Таймера и статистики (R10).
-        val savedWork = appPreferences.workDurationSec
-        val savedBreak = appPreferences.breakDurationSec
-        val savedTotal = appPreferences.totalPomodoros
-        _uiState.update {
-            it.copy(
-                timer = it.timer.copy(
-                    workDurationSec = savedWork,
-                    breakDurationSec = savedBreak,
-                    secondsLeft = savedWork,
-                    totalPomodoros = savedTotal
-                ),
-                todayPomodoros = appPreferences.todayCompletedPomodoros,
-                totalPomodoros = appPreferences.totalCompletedPomodoros
-            )
+        // Восстановление сохранённых длительностей Таймера (R10).
+        viewModelScope.launch {
+            val savedWork = settingsStore.workDurationSec.first()
+            val savedBreak = settingsStore.breakDurationSec.first()
+            val savedTotal = settingsStore.totalPomodoros.first()
+            _uiState.update {
+                it.copy(
+                    timer = it.timer.copy(
+                        workDurationSec = savedWork,
+                        breakDurationSec = savedBreak,
+                        secondsLeft = savedWork,
+                        totalPomodoros = savedTotal
+                    )
+                )
+            }
+        }
+
+        // Реактивное наблюдение за статистикой (счётчики, серии, история).
+        viewModelScope.launch {
+            settingsStore.stats.collect { snapshot ->
+                _uiState.update {
+                    it.copy(
+                        todayPomodoros = snapshot.today,
+                        totalPomodoros = snapshot.total,
+                        stats = snapshot
+                    )
+                }
+            }
         }
 
         // Наблюдение за состоянием Таймера из фоновой службы (источник истины
@@ -184,7 +210,7 @@ class StudyDungeonViewModel(
                 _uiState.update { it.copy(timer = result.state) }
                 rewardedPomodoros = 0
                 // Сохраняем выбранные длительности между запусками (R10.1).
-                appPreferences.saveTimerSettings(workSec, breakSec, total)
+                viewModelScope.launch { settingsStore.saveTimerSettings(workSec, breakSec, total) }
             }
             is ApplySettingsResult.Rejected ->
                 emitMessage("Нельзя менять настройки во время работы таймера")
@@ -266,8 +292,34 @@ class StudyDungeonViewModel(
      * Requirements: 8.4
      */
     fun startNewSeries() {
+        // Запрет повторного сброса уже «свежей» Серии (нулевой прогресс, стоп).
+        if (PomodoroEngine.isFreshSeries(_uiState.value.timer)) {
+            emitMessage(getApplication<Application>().getString(R.string.series_already_new))
+            return
+        }
         _uiState.update { it.copy(timer = PomodoroEngine.startNewSeries(it.timer)) }
         rewardedPomodoros = 0
+    }
+
+    /**
+     * Использует предмет Инвентаря по индексу [index]: применяет его эффект и
+     * расходует одну единицу предмета ([ShopCatalog.useItem]). Сохраняет
+     * состояние Героя (R10.1).
+     */
+    fun useItem(index: Int) {
+        val hero = _uiState.value.hero
+        val updated = ShopCatalog.useItem(hero, index)
+        if (updated != hero) updateHero(updated)
+    }
+
+    /** Сохраняет выбранную пользователем тему оформления. */
+    fun setThemeChoice(choice: ThemeChoice) {
+        viewModelScope.launch { settingsStore.setThemeChoice(choice) }
+    }
+
+    /** Отмечает онбординг как завершённый (после первого запуска). */
+    fun completeOnboarding() {
+        viewModelScope.launch { settingsStore.setOnboardingCompleted(true) }
     }
 
     /**
@@ -384,15 +436,10 @@ class StudyDungeonViewModel(
             while (rewardedPomodoros < ts.completedPomodoros) {
                 hero = SessionEngine.applyWorkSuccessReward(hero) // R7.6, R8.1 (атомарно)
                 rewardedPomodoros++
-                appPreferences.recordCompletedPomodoro()
+                // Учёт в истории статистики; UI обновится через наблюдение stats.
+                viewModelScope.launch { settingsStore.recordCompletedPomodoro() }
             }
             updateHero(hero) // R10.1
-            _uiState.update {
-                it.copy(
-                    todayPomodoros = appPreferences.todayCompletedPomodoros,
-                    totalPomodoros = appPreferences.totalCompletedPomodoros
-                )
-            }
         }
 
         val wasFocus = _uiState.value.focusMode

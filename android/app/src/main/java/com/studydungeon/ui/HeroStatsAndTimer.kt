@@ -139,7 +139,7 @@ fun HeroStatsPanel(
                 label = stringResource(R.string.stat_health),
                 valueText = "${hero.currentHp} / ${hero.maxHp}",
                 progress = ratio(hero.currentHp, hero.maxHp),
-                color = HealthColor,
+                color = Dungeon.Health,
                 iconRes = R.drawable.ic_hp
             )
 
@@ -158,7 +158,7 @@ fun HeroStatsPanel(
                     Text(
                         text = "${hero.gold}",
                         style = MaterialTheme.typography.titleSmall,
-                        color = GoldColor
+                        color = Dungeon.GoldBright
                     )
                 }
 
@@ -290,16 +290,9 @@ fun TimerDisplay(
                     textAlign = TextAlign.Center
                 )
 
-                // Счётчик Помидорок Серии (R8.2, R14.2).
-                Text(
-                    text = stringResource(
-                        R.string.pomodoro_counter,
-                        timer.completedPomodoros,
-                        timer.totalPomodoros
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Dungeon.Parchment
-                )
+                // Чёткое обозначение Серии: подпись, прогресс и точки-индикаторы
+                // завершённых Помидорок (R8.2, R14.2).
+                SeriesIndicator(timer = timer)
 
                 Text(
                     text = stringResource(runStateLabel(timer.runState)),
@@ -313,6 +306,62 @@ fun TimerDisplay(
                 visible = showSuccess,
                 modifier = Modifier.align(Alignment.Center)
             )
+        }
+    }
+}
+
+/**
+ * Чёткое обозначение Серии: подпись «Серия», основной статус (не запущена /
+ * «Помидорка X из Y» / завершена) и ряд точек-индикаторов по числу Помидорок
+ * (заполненные — завершённые, контурная — текущая).
+ */
+@Composable
+private fun SeriesIndicator(
+    timer: TimerState,
+    modifier: Modifier = Modifier
+) {
+    val total = timer.totalPomodoros.coerceAtLeast(1)
+    val done = timer.completedPomodoros.coerceIn(0, total)
+    val notStarted = timer.runState == RunState.STOPPED && done == 0
+    val completed = done >= total
+    val currentIndex = (done + 1).coerceAtMost(total)
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.series_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = Dungeon.ParchmentMuted
+        )
+        Text(
+            text = when {
+                notStarted -> stringResource(R.string.series_not_started)
+                completed -> stringResource(R.string.series_completed)
+                else -> stringResource(R.string.series_progress, currentIndex, total)
+            },
+            style = MaterialTheme.typography.titleMedium,
+            color = Dungeon.GoldBright,
+            textAlign = TextAlign.Center
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(total) { i ->
+                val isDone = i < done
+                val isCurrent = i == done && !completed && !notStarted
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isDone) Dungeon.Gold else Color.Transparent)
+                        .border(
+                            width = 1.5.dp,
+                            color = if (isCurrent || isDone) Dungeon.GoldBright else Dungeon.GoldTrim.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                )
+            }
         }
     }
 }
@@ -446,12 +495,6 @@ private fun debuffLabel(debuff: Debuff): Int = when (debuff) {
     Debuff.DISTRACTED -> R.string.debuff_distracted
     Debuff.WEAK -> R.string.debuff_weak
 }
-
-/** Цвет индикатора Здоровья. */
-private val HealthColor = Dungeon.Health
-
-/** Цвет подписи Золота. */
-private val GoldColor = Dungeon.GoldBright
 
 // endregion
 

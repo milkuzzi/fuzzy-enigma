@@ -1,5 +1,6 @@
 package com.studydungeon.ui
 
+import com.studydungeon.data.StatsSnapshot
 import com.studydungeon.domain.Debuff
 import com.studydungeon.domain.Hero
 import com.studydungeon.domain.TimerState
@@ -41,7 +42,8 @@ data class UiState(
     val shopVisible: Boolean = true,
     val inventoryVisible: Boolean = true,
     val todayPomodoros: Int = 0,
-    val totalPomodoros: Int = 0
+    val totalPomodoros: Int = 0,
+    val stats: StatsSnapshot = StatsSnapshot()
 ) {
     /**
      * Активирует Режим_Фокуса. Намеренная видимость секций сохраняется без

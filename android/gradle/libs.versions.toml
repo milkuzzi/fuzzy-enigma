@@ -11,6 +11,7 @@ junit = "4.13.2"
 kotest = "5.9.1"
 androidxJunit = "1.2.1"
 espressoCore = "3.6.1"
+datastore = "1.1.1"
 
 [libraries]
 # AndroidX core
@@ -36,6 +37,9 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 
 # JSON serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
+
+# Typed preferences storage
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 
 # Unit + property-based testing (JVM)
 junit = { group = "junit", name = "junit", version.ref = "junit" }

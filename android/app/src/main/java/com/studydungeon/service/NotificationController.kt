@@ -158,6 +158,8 @@ class NotificationController(
             .setContentIntent(contentIntent())
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            // Показывать содержимое и кнопки управления на экране блокировки.
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         // Кнопки управления таймером прямо из уведомления: на паузе —
         // «Продолжить», иначе — «Пауза»; всегда доступна «Стоп».

@@ -18,10 +18,12 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.studydungeon.R
+import com.studydungeon.domain.RunState
 import com.studydungeon.lock.LockMode
 import com.studydungeon.lock.LockPreferences
 import com.studydungeon.ui.BlockedAccessActivity
@@ -54,6 +56,7 @@ class LockEnforcementService : Service() {
 
     private var overlayView: View? = null
     private var overlayTimeView: TextView? = null
+    private var overlayPauseButton: Button? = null
     private var mode: LockMode = LockMode.NONE
     private var phaseEndMs: Long = 0L
 
@@ -129,14 +132,28 @@ class LockEnforcementService : Service() {
             setPadding(0, 24, 0, 24)
         }
         val hint = TextView(this).apply {
-            text = "Телефон заблокирован до конца фазы работы.\nЗаверши фазу в приложении, чтобы выйти."
+            text = "Телефон заблокирован до конца фазы работы.\nСними паузу или заверши фазу в приложении."
             setTextColor(PARCHMENT_MUTED)
             textSize = 15f
             gravity = Gravity.CENTER
         }
+        // Кнопка Пауза/Продолжить прямо на оверлее блокировки: управляет
+        // таймером через TimerForegroundService, не выходя из блокировки.
+        val pauseButton = Button(this).apply {
+            text = "Пауза"
+            setOnClickListener {
+                val running = TimerForegroundService.timerState.value?.runState == RunState.RUNNING
+                if (running) {
+                    TimerForegroundService.pause(this@LockEnforcementService)
+                } else {
+                    TimerForegroundService.resume(this@LockEnforcementService)
+                }
+            }
+        }
         root.addView(title)
         root.addView(time)
         root.addView(hint)
+        root.addView(pauseButton)
 
         // Перехватываем «назад», чтобы из-под оверлея нельзя было уйти.
         root.setOnKeyListener { _, keyCode, _ ->
@@ -157,6 +174,7 @@ class LockEnforcementService : Service() {
             windowManager.addView(root, params)
             overlayView = root
             overlayTimeView = time
+            overlayPauseButton = pauseButton
             root.requestFocus()
             handler.post(timeUpdater)
         }
@@ -166,20 +184,28 @@ class LockEnforcementService : Service() {
         overlayView?.let { runCatching { windowManager.removeView(it) } }
         overlayView = null
         overlayTimeView = null
+        overlayPauseButton = null
     }
 
-    /** Обновляет оставшееся время на оверлее раз в секунду. */
+    /**
+     * Обновляет оставшееся время и подпись кнопки на оверлее раз в секунду.
+     * Источник истины — живое состояние [TimerForegroundService.timerState]:
+     * на паузе время замирает, а кнопка показывает «Продолжить».
+     */
     private val timeUpdater = object : Runnable {
         override fun run() {
             val view = overlayTimeView ?: return
-            val remaining = if (phaseEndMs > 0) {
-                maxOf(0L, (phaseEndMs - System.currentTimeMillis()) / 1000L)
-            } else {
-                0L
+            val state = TimerForegroundService.timerState.value
+            val paused = state?.runState == RunState.PAUSED
+            val remaining = when {
+                state != null -> state.secondsLeft.toLong()
+                phaseEndMs > 0 -> maxOf(0L, (phaseEndMs - System.currentTimeMillis()) / 1000L)
+                else -> 0L
             }
             val m = remaining / 60
             val s = remaining % 60
             view.text = "%02d:%02d".format(m, s)
+            overlayPauseButton?.text = if (paused) "Продолжить" else "Пауза"
             handler.postDelayed(this, 1000L)
         }
     }

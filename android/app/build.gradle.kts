@@ -83,6 +83,9 @@ dependencies {
     // JSON serialization (persistence parity with character_save.json)
     implementation(libs.kotlinx.serialization.json)
 
+    // Typed app settings + statistics storage (DataStore)
+    implementation(libs.androidx.datastore.preferences)
+
     // Unit + property-based testing on the JVM
     testImplementation(libs.junit)
     testImplementation(libs.kotest.runner.junit5)
