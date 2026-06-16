@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import com.studydungeon.R
 import com.studydungeon.domain.Phase
 import com.studydungeon.domain.PomodoroEngine
+import com.studydungeon.domain.RunState
 import com.studydungeon.domain.TimerState
 
 /**
@@ -134,12 +135,20 @@ class NotificationController(
      */
     fun buildTimerNotification(state: TimerState): android.app.Notification {
         val phaseLabel = phaseLabel(state.phase)
-        val content = context.getString(
-            R.string.notif_timer_content,
-            phaseLabel,
-            PomodoroEngine.formatTime(state.secondsLeft)
-        )
-        return NotificationCompat.Builder(context, CHANNEL_TIMER)
+        val paused = state.runState == RunState.PAUSED
+        val content = if (paused) {
+            context.getString(
+                R.string.notif_timer_paused,
+                PomodoroEngine.formatTime(state.secondsLeft)
+            )
+        } else {
+            context.getString(
+                R.string.notif_timer_content,
+                phaseLabel,
+                PomodoroEngine.formatTime(state.secondsLeft)
+            )
+        }
+        val builder = NotificationCompat.Builder(context, CHANNEL_TIMER)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(content)
@@ -149,7 +158,45 @@ class NotificationController(
             .setContentIntent(contentIntent())
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .build()
+
+        // Кнопки управления таймером прямо из уведомления: на паузе —
+        // «Продолжить», иначе — «Пауза»; всегда доступна «Стоп».
+        if (paused) {
+            builder.addAction(
+                R.drawable.ic_notif_play,
+                context.getString(R.string.notif_action_resume),
+                servicePendingIntent(TimerForegroundService.ACTION_RESUME, REQ_RESUME)
+            )
+        } else {
+            builder.addAction(
+                R.drawable.ic_notif_pause,
+                context.getString(R.string.notif_action_pause),
+                servicePendingIntent(TimerForegroundService.ACTION_PAUSE, REQ_PAUSE)
+            )
+        }
+        builder.addAction(
+            R.drawable.ic_notif_stop,
+            context.getString(R.string.notif_action_stop),
+            servicePendingIntent(TimerForegroundService.ACTION_STOP, REQ_STOP)
+        )
+        return builder.build()
+    }
+
+    /**
+     * [PendingIntent], доставляющий [action] в [TimerForegroundService] при
+     * нажатии кнопки уведомления. На Android 8.0+ служба запускается
+     * как foreground ([PendingIntent.getForegroundService]).
+     */
+    private fun servicePendingIntent(action: String, requestCode: Int): PendingIntent {
+        val intent = Intent(context, TimerForegroundService::class.java).apply {
+            this.action = action
+        }
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(context, requestCode, intent, flags)
+        } else {
+            PendingIntent.getService(context, requestCode, intent, flags)
+        }
     }
 
     /**
@@ -351,5 +398,10 @@ class NotificationController(
 
         /** Идентификатор уведомления-напоминания о возврате к учёбе. */
         const val EVENT_RETURN_NOTIFICATION_ID: Int = 1004
+
+        /** Коды запросов для PendingIntent кнопок управления таймером. */
+        private const val REQ_PAUSE: Int = 2001
+        private const val REQ_RESUME: Int = 2002
+        private const val REQ_STOP: Int = 2003
     }
 }

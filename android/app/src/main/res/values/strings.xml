@@ -22,4 +22,10 @@
     <string name="notif_series_text">Награда за серию: +%1$d опыта, +%2$d золота.</string>
     <string name="notif_return_title">Вернись к учёбе!</string>
     <string name="notif_return_text">Осталось %1$s. Здоровье героя: %2$d.</string>
+
+    <!-- Timer notification action buttons (управление таймером из уведомления) -->
+    <string name="notif_action_pause">Пауза</string>
+    <string name="notif_action_resume">Продолжить</string>
+    <string name="notif_action_stop">Стоп</string>
+    <string name="notif_timer_paused">На паузе · осталось %1$s</string>
 </resources>
