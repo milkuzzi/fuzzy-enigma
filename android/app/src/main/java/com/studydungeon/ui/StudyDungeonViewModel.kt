@@ -366,13 +366,9 @@ class StudyDungeonViewModel(
      * Requirements: 13.11
      */
     fun onAppBackgrounded() {
-        val state = _uiState.value
-        if (state.focusMode && state.timer.runState == RunState.RUNNING) {
-            notificationController.notifyReturnReminder(
-                state.timer.secondsLeft,
-                state.hero.currentHp
-            )
-        }
+        // Напоминание о возврате отключено: пользователю нужно только
+        // постоянное уведомление Таймера с кнопкой паузы, без лишних
+        // событийных уведомлений.
     }
 
     /**

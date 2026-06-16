@@ -88,37 +88,14 @@ class FocusModeController(private val activity: ComponentActivity) {
      */
     fun activate(lockDurationSec: Int, pinScreen: Boolean = true) {
         this.lockDurationSec = lockDurationSec
+        focusActive = false
 
         // Удерживаем экран включённым на время Режима_Фокуса (R13.5).
+        // Закрепление_Экрана (Screen Pinning) полностью отключено: удержание
+        // обеспечивает «сильная» блокировка через оверлей/usage-access
+        // ([com.studydungeon.lock.LockEnforcementService]). Параметр [pinScreen]
+        // сохранён для совместимости вызовов и игнорируется.
         activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-        // Если включена «сильная» блокировка через оверлей/usage-access
-        // ([com.studydungeon.lock.LockEnforcementService]), Screen Pinning не
-        // используется: пользователь жаловался на его подтверждения, а удержание
-        // обеспечивает оверлей. В этом случае не трактуем отсутствие закрепления
-        // как принудительный выход (focusActive остаётся false).
-        if (!pinScreen) {
-            focusActive = false
-            return
-        }
-
-        focusActive = true
-
-        // Включаем Закрепление_Экрана (R13.2, R13.3). При пользовательском
-        // Screen Pinning система может показать подтверждающий диалог; при
-        // отсутствии прав вызов может не перевести задачу в режим блокировки.
-        try {
-            activity.startLockTask()
-        } catch (e: IllegalStateException) {
-            Log.w(TAG, "startLockTask() failed: ${e.message}")
-        }
-
-        // Если закрепление так и не включилось — запрашиваем его у пользователя
-        // и показываем инструкцию (R13.7). Фокус не считается удерживаемым
-        // средствами Lock Task, пока пользователь не включит закрепление.
-        if (!isLockTaskActive()) {
-            lockTaskUnavailableCallback?.invoke(PINNING_INSTRUCTION)
-        }
     }
 
     /**
@@ -133,16 +110,8 @@ class FocusModeController(private val activity: ComponentActivity) {
      * Requirements: 13.8, 13.9
      */
     fun deactivate() {
-        // Сначала снимаем признак активности: штатное снятие закрепления не
-        // должно интерпретироваться как принудительный выход (R13.10).
         focusActive = false
         lockDurationSec = 0
-
-        try {
-            activity.stopLockTask()
-        } catch (e: IllegalStateException) {
-            Log.w(TAG, "stopLockTask() failed: ${e.message}")
-        }
 
         // Возвращаем экрану обычное поведение — снимаем удержание экрана.
         activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -207,18 +176,7 @@ class FocusModeController(private val activity: ComponentActivity) {
      *
      * Requirements: 9.4, 13.10
      */
-    fun checkForLockTaskExit(): Boolean {
-        if (!focusActive) return false
-        if (isLockTaskActive()) return false
-
-        // Принудительный выход из закрепления до штатной деактивации.
-        focusActive = false
-        lockDurationSec = 0
-        activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-        lockTaskExitCallback?.invoke()
-        return true
-    }
+    fun checkForLockTaskExit(): Boolean = false
 
     companion object {
         private const val TAG = "FocusModeController"

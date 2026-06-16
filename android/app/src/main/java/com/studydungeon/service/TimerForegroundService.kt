@@ -204,20 +204,19 @@ class TimerForegroundService : Service() {
                         accumulateWorkReward()
                         publish(result.state)
                         feedback.onPhaseChange()
-                        notificationController.notifyBreakStarted()
+                        // Только постоянное уведомление Таймера — без отдельных
+                        // событийных уведомлений (по требованию пользователя).
                         notificationController.updateTimerNotification(result.state)
                     }
                     is TickResult.BreakCompleted -> {
                         publish(result.state)
                         feedback.onPhaseChange()
-                        notificationController.notifyWorkStarted()
                         notificationController.updateTimerNotification(result.state)
                     }
                     is TickResult.SeriesCompleted -> {
                         accumulateWorkReward()
                         publish(result.state)
                         feedback.onSeriesCompleted()
-                        notificationController.notifySeriesCompleted(accumulatedXp, accumulatedGold)
                         // Серия завершена — отсчёт прекращаем и сворачиваем службу.
                         stopService()
                         return@launch

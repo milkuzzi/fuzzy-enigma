@@ -1,7 +1,10 @@
 package com.studydungeon.service
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.Ringtone
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -21,6 +24,10 @@ class SessionFeedback(context: Context) {
 
     private val appContext = context.applicationContext
     private val settings = SettingsStore(appContext)
+
+    /** Удерживаемая ссылка на текущий проигрываемый рингтон, чтобы он не был
+     *  собран GC до окончания воспроизведения. */
+    private var activeRingtone: Ringtone? = null
 
     /** Обратная связь на смену фазы (работа↔отдых): короткая вибрация + звук. */
     fun onPhaseChange() = play(longArrayOf(0, 200))
@@ -54,8 +61,24 @@ class SessionFeedback(context: Context) {
 
     private fun playSound() {
         runCatching {
-            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            RingtoneManager.getRingtone(appContext, uri)?.play()
+            // Берём первый доступный системный звук: уведомление → будильник →
+            // звонок. На части устройств звук уведомления может быть «Нет».
+            val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                ?: return
+
+            val ringtone = RingtoneManager.getRingtone(appContext, uri) ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                ringtone.audioAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            }
+            // Останавливаем предыдущий и удерживаем ссылку на текущий рингтон.
+            activeRingtone?.runCatching { stop() }
+            activeRingtone = ringtone
+            ringtone.play()
         }.onFailure { Log.w(TAG, "Не удалось воспроизвести звук", it) }
     }
 

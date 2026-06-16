@@ -1,34 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Dungeon-style launcher emblem: a golden hourglass (the app's recurring
-     timer motif) inside a stone arch, centred within the adaptive-icon safe zone. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-
-    <!-- Stone tablet backing behind the hourglass -->
-    <path
-        android:fillColor="#3A2A1A"
-        android:strokeColor="#C9A24B"
-        android:strokeWidth="2"
-        android:pathData="M37,30 h34 a5,5 0 0 1 5,5 v38 a5,5 0 0 1 -5,5 h-34 a5,5 0 0 1 -5,-5 v-38 a5,5 0 0 1 5,-5 z" />
-
-    <!-- Top frame bar -->
-    <path
-        android:fillColor="#E0A33B"
-        android:pathData="M34,33 h40 a2,2 0 0 1 2,2 v3 a2,2 0 0 1 -2,2 h-40 a2,2 0 0 1 -2,-2 v-3 a2,2 0 0 1 2,-2 z" />
-    <!-- Bottom frame bar -->
-    <path
-        android:fillColor="#E0A33B"
-        android:pathData="M34,68 h40 a2,2 0 0 1 2,2 v3 a2,2 0 0 1 -2,2 h-40 a2,2 0 0 1 -2,-2 v-3 a2,2 0 0 1 2,-2 z" />
-
-    <!-- Glass bulbs (bowtie) -->
-    <path
-        android:fillColor="#F1CE7A"
-        android:pathData="M40,41 L68,41 L54,54 L68,67 L40,67 L54,54 Z" />
-    <!-- Sand falling through the neck -->
-    <path
-        android:fillColor="#C8412E"
-        android:pathData="M52,52 L56,52 L56,67 L52,67 Z" />
-</vector>
+<!-- Launcher foreground: the hourglass pixel-art sprite (the app's recurring
+     timer motif), inset into the adaptive-icon safe zone. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_hourglass"
+    android:inset="20%" />

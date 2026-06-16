@@ -222,16 +222,20 @@ fun TitleBanner(modifier: Modifier = Modifier) {
  */
 @Composable
 fun DungeonBackground(modifier: Modifier = Modifier) {
+    val light = Dungeon.palette == LightDungeonPalette
     Box(modifier = modifier) {
         Image(
-            painter = painterResource(id = R.drawable.bg_dungeon_wall),
+            painter = painterResource(
+                id = if (light) R.drawable.bg_dungeon_wall_light else R.drawable.bg_dungeon_wall
+            ),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-        val scrim = if (Dungeon.palette == LightDungeonPalette) {
-            // Светлая тема: пергаментная вуаль вместо тёмной.
-            listOf(Color(0xF2F3E7CC), Color(0xE6EFE0C2), Color(0xF7F3E7CC))
+        val scrim = if (light) {
+            // Светлая тема: лёгкая полупрозрачная пергаментная вуаль, чтобы
+            // светлый спрайт стены оставался виден.
+            listOf(Color(0x66F3E7CC), Color(0x4DEFE0C2), Color(0x73F3E7CC))
         } else {
             listOf(Color(0xCC0B0805), Color(0x99110B07), Color(0xD60B0805))
         }

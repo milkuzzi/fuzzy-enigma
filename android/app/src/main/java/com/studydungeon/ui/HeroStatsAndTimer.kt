@@ -95,7 +95,6 @@ fun HeroStatsPanel(
                     modifier = Modifier
                         .size(76.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF15100A))
                         .border(2.dp, Dungeon.GoldTrim, RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center
                 ) {
