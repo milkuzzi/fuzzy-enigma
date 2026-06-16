@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Study Dungeon</string>
+
+    <!-- Notification channels (R11.3, R12) -->
+    <string name="notif_channel_timer_name">Таймер сессии</string>
+    <string name="notif_channel_timer_desc">Постоянное уведомление с текущей фазой и оставшимся временем.</string>
+    <string name="notif_channel_events_name">События сессии</string>
+    <string name="notif_channel_events_desc">Уведомления о смене фаз, завершении серии и напоминания о возврате.</string>
+
+    <!-- Ongoing timer notification (R11.3) -->
+    <string name="notif_timer_phase_work">Фаза работы</string>
+    <string name="notif_timer_phase_break">Фаза отдыха</string>
+    <string name="notif_timer_content">%1$s · осталось %2$s</string>
+
+    <!-- Event notifications (R12.1, R12.2, R12.3, R13.11) -->
+    <string name="notif_break_title">Помидорка завершена!</string>
+    <string name="notif_break_text">Время отдохнуть. Начинается фаза отдыха.</string>
+    <string name="notif_work_title">Перерыв окончен</string>
+    <string name="notif_work_text">Возвращаемся к учёбе — началась фаза работы.</string>
+    <string name="notif_series_title">Серия завершена!</string>
+    <string name="notif_series_text">Награда за серию: +%1$d опыта, +%2$d золота.</string>
+    <string name="notif_return_title">Вернись к учёбе!</string>
+    <string name="notif_return_text">Осталось %1$s. Здоровье героя: %2$d.</string>
+</resources>

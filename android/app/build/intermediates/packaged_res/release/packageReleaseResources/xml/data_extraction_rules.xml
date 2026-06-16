@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Include the hero save file in cloud backups. -->
+    </cloud-backup>
+    <device-transfer>
+        <!-- Include the hero save file in device-to-device transfers. -->
+    </device-transfer>
+</data-extraction-rules>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. Compose drives the actual UI styling;
+         this is the launch/system theme. -->
+    <style name="Theme.StudyDungeon" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

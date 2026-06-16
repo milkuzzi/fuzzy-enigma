@@ -1,0 +1,32 @@
+R_DEF: Internal format may change without notice
+local
+color black
+color ic_launcher_background
+color purple_200
+color purple_500
+color purple_700
+color teal_200
+color teal_700
+color white
+drawable ic_launcher_foreground
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+string notif_break_text
+string notif_break_title
+string notif_channel_events_desc
+string notif_channel_events_name
+string notif_channel_timer_desc
+string notif_channel_timer_name
+string notif_return_text
+string notif_return_title
+string notif_series_text
+string notif_series_title
+string notif_timer_content
+string notif_timer_phase_break
+string notif_timer_phase_work
+string notif_work_text
+string notif_work_title
+style Theme.StudyDungeon
+xml backup_rules
+xml data_extraction_rules

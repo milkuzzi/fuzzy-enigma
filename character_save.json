@@ -1,0 +1,15 @@
+{
+    "name": "Искатель Знаний",
+    "level": 2,
+    "current_xp": 50,
+    "xp_to_next": 150,
+    "current_hp": 0,
+    "max_hp": 120,
+    "gold": 20,
+    "debuff": "distracted",
+    "inventory": [
+        "Малое зелье",
+        "Малое зелье",
+        "🧪 Малое зелье"
+    ]
+}
