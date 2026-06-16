@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -14,6 +15,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.studydungeon.service.FocusModeController
 
 /**
@@ -67,15 +69,20 @@ class MainActivity : ComponentActivity() {
         setContent {
             StudyDungeonTheme {
                 val snackbarHostState = remember { SnackbarHostState() }
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-                ) { innerPadding ->
-                    StudyDungeonScreen(
-                        viewModel = viewModel,
-                        snackbarHostState = snackbarHostState,
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // Каменный фон подземелья под всем интерфейсом (R14).
+                    DungeonBackground(modifier = Modifier.fillMaxSize())
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        containerColor = Color.Transparent,
+                        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+                    ) { innerPadding ->
+                        StudyDungeonScreen(
+                            viewModel = viewModel,
+                            snackbarHostState = snackbarHostState,
+                            modifier = Modifier.padding(innerPadding)
+                        )
+                    }
                 }
             }
         }

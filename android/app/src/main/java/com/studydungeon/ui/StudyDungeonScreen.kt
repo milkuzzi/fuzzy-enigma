@@ -71,6 +71,9 @@ fun StudyDungeonScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Заголовочный баннер приложения в стиле подземелья.
+        TitleBanner()
+
         // Панель характеристик Героя (R1.3, R14.1, R14.6).
         HeroStatsPanel(hero = uiState.hero)
 
