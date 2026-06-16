@@ -9,6 +9,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +19,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -43,6 +43,7 @@ import com.studydungeon.domain.Phase
 import com.studydungeon.domain.PomodoroEngine
 import com.studydungeon.domain.RunState
 import com.studydungeon.domain.TimerState
+import com.studydungeon.R
 
 /**
  * Панель характеристик Героя и отображение Таймера для Compose-UI.
@@ -70,31 +71,45 @@ fun HeroStatsPanel(
     hero: Hero,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+    DungeonPanel(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Портрет Героя в каменной рамке + имя и уровень.
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = hero.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Уровень ${hero.level}",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Box(
+                    modifier = Modifier
+                        .size(76.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF15100A))
+                        .border(2.dp, Dungeon.GoldTrim, RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PixelIcon(
+                        resId = R.drawable.hero_portrait,
+                        contentDescription = "Портрет Героя",
+                        size = 70.dp
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = hero.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Dungeon.GoldBright
+                    )
+                    Text(
+                        text = "Уровень ${hero.level}",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Dungeon.Parchment
+                    )
+                }
             }
 
             // Индикатор Опыта (R14.1).
@@ -102,7 +117,8 @@ fun HeroStatsPanel(
                 label = "Опыт",
                 valueText = "${hero.currentXp} / ${hero.xpToNext}",
                 progress = ratio(hero.currentXp, hero.xpToNext),
-                color = MaterialTheme.colorScheme.primary
+                color = Dungeon.Xp,
+                iconRes = R.drawable.ic_xp
             )
 
             // Индикатор Здоровья (R14.1).
@@ -110,7 +126,8 @@ fun HeroStatsPanel(
                 label = "Здоровье",
                 valueText = "${hero.currentHp} / ${hero.maxHp}",
                 progress = ratio(hero.currentHp, hero.maxHp),
-                color = HealthColor
+                color = HealthColor,
+                iconRes = R.drawable.ic_hp
             )
 
             Row(
@@ -118,12 +135,19 @@ fun HeroStatsPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Золото: ${hero.gold}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = GoldColor
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PixelIcon(
+                        resId = R.drawable.ic_gold,
+                        contentDescription = "Золото",
+                        size = 22.dp
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${hero.gold}",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = GoldColor
+                    )
+                }
 
                 // Индикатор активного Дебаффа: виден ⇔ debuff != NONE (R14.6).
                 if (hero.debuff != Debuff.NONE) {
@@ -164,6 +188,7 @@ private fun StatBar(
     valueText: String,
     progress: Float,
     color: Color,
+    iconRes: Int,
     modifier: Modifier = Modifier
 ) {
     val animatedProgress by animateFloatAsState(
@@ -174,9 +199,14 @@ private fun StatBar(
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = label, style = MaterialTheme.typography.labelMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PixelIcon(resId = iconRes, contentDescription = null, size = 18.dp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = label, style = MaterialTheme.typography.labelLarge)
+            }
             Text(text = valueText, style = MaterialTheme.typography.labelMedium)
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -184,10 +214,11 @@ private fun StatBar(
             progress = { animatedProgress },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(10.dp)
-                .clip(RoundedCornerShape(5.dp)),
+                .height(14.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .border(1.5.dp, Dungeon.GoldTrim, RoundedCornerShape(7.dp)),
             color = color,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
+            trackColor = Color(0xFF14100A)
         )
     }
 }
@@ -212,42 +243,46 @@ fun TimerDisplay(
     showSuccess: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+    DungeonPanel(modifier = modifier.fillMaxWidth()) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Метка текущей фазы (R7.2, R14.2).
                 Text(
                     text = phaseLabel(timer.phase),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     color = if (timer.phase == Phase.WORK) {
-                        MaterialTheme.colorScheme.primary
+                        Dungeon.Gold
                     } else {
-                        MaterialTheme.colorScheme.secondary
+                        Dungeon.Teal
                     }
                 )
 
-                // Оставшееся время "ММ:СС" (R7.2, R14.2).
+                PixelIcon(
+                    resId = R.drawable.ic_hourglass,
+                    contentDescription = null,
+                    size = 44.dp
+                )
+
+                // Оставшееся время "ММ:СС" пиксельным шрифтом (R7.2, R14.2).
                 Text(
                     text = PomodoroEngine.formatTime(timer.secondsLeft),
-                    fontSize = 56.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontFamily = Dungeon.PixelFont,
+                    fontSize = 40.sp,
+                    color = Dungeon.GoldBright,
                     textAlign = TextAlign.Center
                 )
 
                 // Счётчик Помидорок Серии (R8.2, R14.2).
                 Text(
                     text = "Помидорки: ${timer.completedPomodoros} / ${timer.totalPomodoros}",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Dungeon.Parchment
                 )
 
                 Text(
@@ -288,21 +323,20 @@ fun SuccessAnimation(
         exit = scaleOut(animationSpec = tween(400, easing = FastOutSlowInEasing)) +
             fadeOut(animationSpec = tween(400, easing = LinearEasing))
     ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(16.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "🎉",
-                    fontSize = 64.sp
+        DungeonPanel {
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                PixelIcon(
+                    resId = R.drawable.ic_gold,
+                    contentDescription = null,
+                    size = 56.dp
                 )
                 Text(
                     text = "Помидорка завершена!",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = Dungeon.GoldBright
                 )
             }
         }
@@ -341,10 +375,10 @@ private fun debuffLabel(debuff: Debuff): String = when (debuff) {
 }
 
 /** Цвет индикатора Здоровья. */
-private val HealthColor = Color(0xFFE53935)
+private val HealthColor = Dungeon.Health
 
 /** Цвет подписи Золота. */
-private val GoldColor = Color(0xFFFFA000)
+private val GoldColor = Dungeon.GoldBright
 
 // endregion
 

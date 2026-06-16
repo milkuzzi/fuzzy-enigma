@@ -5,13 +5,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -25,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,6 +32,7 @@ import com.studydungeon.domain.RunState
 import com.studydungeon.domain.ShopCatalog
 import com.studydungeon.domain.ShopItem
 import com.studydungeon.domain.TimerState
+import com.studydungeon.R
 
 /**
  * Элементы управления сессией и сворачиваемые секции настроек, магазина и
@@ -87,10 +86,7 @@ fun SessionControls(
     val paused = timer.runState == RunState.PAUSED
     val stopped = timer.runState == RunState.STOPPED
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+    DungeonPanel(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -163,10 +159,7 @@ fun CollapsibleSection(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+    DungeonPanel(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
@@ -179,12 +172,12 @@ fun CollapsibleSection(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    color = Dungeon.GoldBright
                 )
                 Text(
                     text = if (expanded) "▲" else "▼",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Dungeon.GoldTrim
                 )
             }
             AnimatedVisibility(visible = expanded) {
@@ -340,16 +333,31 @@ fun ShopSectionContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                PixelIcon(
+                    resId = shopItemIcon(item.id),
+                    contentDescription = null,
+                    size = 36.dp
+                )
+                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.displayName,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Dungeon.Parchment
                     )
-                    Text(
-                        text = "Стоимость: ${item.cost} золота",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PixelIcon(
+                            resId = R.drawable.ic_gold,
+                            contentDescription = null,
+                            size = 14.dp
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${item.cost} золота",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Dungeon.GoldTrim
+                        )
+                    }
                 }
                 Button(
                     onClick = { onPurchase(item) },
@@ -389,13 +397,32 @@ fun InventorySectionContent(
             )
         } else {
             hero.inventory.forEach { itemName ->
-                Text(
-                    text = "• $itemName",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PixelIcon(
+                        resId = R.drawable.ic_scroll,
+                        contentDescription = null,
+                        size = 18.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = itemName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Dungeon.Parchment
+                    )
+                }
             }
         }
     }
+}
+
+/**
+ * Сопоставление идентификатора товара Магазина с пиксель-арт спрайтом.
+ * По умолчанию (неизвестный id) используется свиток.
+ */
+private fun shopItemIcon(itemId: String): Int = when (itemId) {
+    "potion" -> R.drawable.ic_potion
+    "scroll" -> R.drawable.ic_scroll
+    else -> R.drawable.ic_scroll
 }
 
 // endregion
