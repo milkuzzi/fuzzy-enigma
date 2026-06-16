@@ -7,6 +7,8 @@ package com.studydungeon.domain
  *   эффект при успешной покупке ("potion" → лечение, "scroll" → опыт).
  * @property displayName отображаемое название предмета (показывается в Интерфейсе)
  *   и записывается в Инвентарь Героя при покупке.
+ * @property description краткое пояснение эффекта предмета (показывается в
+ *   Магазине, чтобы было понятно, что делает предмет).
  * @property cost стоимость предмета в Золоте; для всех предметов каталога `cost > 0`.
  *
  * Requirements: 5.5, 5.6
@@ -14,6 +16,7 @@ package com.studydungeon.domain
 data class ShopItem(
     val id: String,
     val displayName: String,
+    val description: String,
     val cost: Int
 )
 
@@ -22,8 +25,8 @@ data class ShopItem(
  *
  * Перенос игровой логики покупок из оригинального `main.py` (`buy_item`),
  * где успех покупки сопровождается эффектом предмета:
- * - "🧪 Малое зелье" за 20 → `heal(30)`;
- * - "📜 Свиток мудрости" за 50 → начисление 50 опыта (эквивалент `add_reward(50, 0)`).
+ * - "Малое зелье" за 20 → `heal(30)`;
+ * - "Свиток мудрости" за 50 → начисление 50 опыта (эквивалент `add_reward(50, 0)`).
  *
  * В отличие от мутабельного Python-кода, [purchase] — чистая функция: она не
  * мутирует исходного Героя, а возвращает [BuyResult] с итоговым состоянием.
@@ -37,8 +40,18 @@ object ShopCatalog {
      * Requirements: 5.5, 5.6
      */
     val items: List<ShopItem> = listOf(
-        ShopItem("potion", "🧪 Малое зелье", 20),   // R5.3 -> heal(30)
-        ShopItem("scroll", "📜 Свиток мудрости", 50) // R5.4 -> addReward(50, 0)
+        ShopItem(
+            id = "potion",
+            displayName = "Малое зелье",
+            description = "Восстанавливает 30 единиц здоровья героя.",
+            cost = 20
+        ),   // R5.3 -> heal(30)
+        ShopItem(
+            id = "scroll",
+            displayName = "Свиток мудрости",
+            description = "Мгновенно даёт 50 опыта герою.",
+            cost = 50
+        ) // R5.4 -> addReward(50, 0)
     )
 
     /**

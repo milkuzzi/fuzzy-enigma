@@ -3,7 +3,12 @@ package com.studydungeon.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -33,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -263,10 +269,9 @@ fun TimerDisplay(
                     }
                 )
 
-                PixelIcon(
-                    resId = R.drawable.ic_hourglass,
-                    contentDescription = null,
-                    size = 44.dp
+                AnimatedHourglass(
+                    running = timer.runState == RunState.RUNNING,
+                    size = 48.dp
                 )
 
                 // Оставшееся время "ММ:СС" пиксельным шрифтом (R7.2, R14.2).
@@ -341,6 +346,42 @@ fun SuccessAnimation(
             }
         }
     }
+}
+
+/**
+ * Анимированные песочные часы таймера: пока Таймер идёт ([running]),
+ * спрайт периодически «переворачивается» (поворот на 360° с паузами),
+ * имитируя пересыпание песка. На паузе/остановке часы стоят ровно.
+ */
+@Composable
+fun AnimatedHourglass(
+    running: Boolean,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 48.dp
+) {
+    val transition = rememberInfiniteTransition(label = "hourglass")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 3200
+                0f at 0
+                0f at 900
+                180f at 1900
+                180f at 2300
+                360f at 3200
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "hourglassAngle"
+    )
+    PixelIcon(
+        resId = R.drawable.ic_hourglass,
+        contentDescription = null,
+        size = size,
+        modifier = modifier.graphicsLayer { rotationZ = if (running) angle else 0f }
+    )
 }
 
 // endregion

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -326,8 +327,13 @@ fun ShopSectionContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Text(
+            text = "Эффект предмета применяется сразу при покупке.",
+            style = MaterialTheme.typography.labelMedium,
+            color = Dungeon.ParchmentMuted
+        )
         ShopCatalog.items.forEachIndexed { index, item ->
-            if (index > 0) HorizontalDivider()
+            if (index > 0) HorizontalDivider(color = Dungeon.GoldTrim.copy(alpha = 0.3f))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -336,7 +342,7 @@ fun ShopSectionContent(
                 PixelIcon(
                     resId = shopItemIcon(item.id),
                     contentDescription = null,
-                    size = 36.dp
+                    size = 40.dp
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -345,6 +351,12 @@ fun ShopSectionContent(
                         style = MaterialTheme.typography.bodyLarge,
                         color = Dungeon.Parchment
                     )
+                    Text(
+                        text = item.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Dungeon.ParchmentMuted
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         PixelIcon(
                             resId = R.drawable.ic_gold,
@@ -359,6 +371,7 @@ fun ShopSectionContent(
                         )
                     }
                 }
+                Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = { onPurchase(item) },
                     enabled = hero.gold >= item.cost
@@ -389,11 +402,16 @@ fun InventorySectionContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        Text(
+            text = "Купленные предметы действуют сразу; здесь — история покупок.",
+            style = MaterialTheme.typography.labelMedium,
+            color = Dungeon.ParchmentMuted
+        )
         if (hero.inventory.isEmpty()) {
             Text(
                 text = "Инвентарь пуст",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Dungeon.ParchmentMuted
             )
         } else {
             hero.inventory.forEach { itemName ->
@@ -469,7 +487,7 @@ private fun ShopSectionPreview() {
 private fun InventorySectionPreview() {
     StudyDungeonTheme {
         CollapsibleSection(title = "Инвентарь", expanded = true, onToggle = {}) {
-            InventorySectionContent(hero = Hero(inventory = listOf("🧪 Малое зелье")))
+            InventorySectionContent(hero = Hero(inventory = listOf("Малое зелье")))
         }
     }
 }
