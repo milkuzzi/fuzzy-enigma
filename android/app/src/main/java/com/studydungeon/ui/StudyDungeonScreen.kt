@@ -107,6 +107,9 @@ fun StudyDungeonScreen(
                     timer = uiState.timer,
                     onApply = onApplySettings
                 )
+                LockSettingsContent(
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
 
             CollapsibleSection(

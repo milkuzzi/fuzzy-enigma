@@ -17,7 +17,11 @@ import com.studydungeon.domain.SessionEngine
 import com.studydungeon.domain.ShopCatalog
 import com.studydungeon.domain.ShopItem
 import com.studydungeon.domain.TimerState
+import com.studydungeon.lock.LockMode
+import com.studydungeon.lock.LockPermissions
+import com.studydungeon.lock.LockPreferences
 import com.studydungeon.service.FocusModeController
+import com.studydungeon.service.LockEnforcementService
 import com.studydungeon.service.NotificationController
 import com.studydungeon.service.TimerForegroundService
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -97,6 +101,9 @@ class StudyDungeonViewModel(
      * при наблюдении за состоянием службы (R7.6, R8.1) без двойного начисления.
      */
     private var rewardedPomodoros: Int = 0
+
+    /** Настройки блокировки телефона (режим + список приложений). */
+    private val lockPreferences = LockPreferences(application)
 
     init {
         // Загрузка сохранённого Героя (R10.2): при отсутствии/повреждении файла
@@ -179,8 +186,16 @@ class StudyDungeonViewModel(
             timer.totalPomodoros
         )
 
+        // Сильная блокировка телефона (оверлей/блокировка приложений), если
+        // выбрана и выданы разрешения. Если она активна — Screen Pinning не
+        // используем (pinScreen = false).
+        val strongLockActive = startPhoneLockIfEnabled(timer)
+
         // Длительность_Блокировки = длительность Фазы_Работы (R6.6, R13.1).
-        focusController?.activate(SessionEngine.lockDurationSec(timer))
+        focusController?.activate(
+            SessionEngine.lockDurationSec(timer),
+            pinScreen = !strongLockActive
+        )
 
         _uiState.update {
             it.activateFocusMode().copy(timer = it.timer.copy(runState = RunState.RUNNING))
@@ -196,6 +211,7 @@ class StudyDungeonViewModel(
      */
     fun pauseSession() {
         TimerForegroundService.pause(getApplication())
+        stopPhoneLock()
         focusController?.deactivate()
         _uiState.update {
             it.deactivateFocusMode().copy(timer = it.timer.copy(runState = RunState.PAUSED))
@@ -211,6 +227,7 @@ class StudyDungeonViewModel(
      */
     fun giveUp() {
         TimerForegroundService.stop(getApplication())
+        stopPhoneLock()
         focusController?.deactivate()
         // R9.2: провал сессии наносит 15 урона (с сохранением — R10.1).
         updateHero(SessionEngine.applySessionFailPenalty(_uiState.value.hero))
@@ -300,7 +317,33 @@ class StudyDungeonViewModel(
         _uiState.update { it.copy(hero = mutated) }
         // Терминальное действие: гарантируем запись до завершения процесса.
         runBlocking { repository.save(mutated) }
+        stopPhoneLock()
         TimerForegroundService.stop(getApplication())
+    }
+
+    /**
+     * Запускает сильную блокировку телефона через [LockEnforcementService],
+     * если пользователь выбрал режим (не [LockMode.NONE]), это Фаза_Работы
+     * и выданы необходимые разрешения. Возвращает true, если блокировка
+     * запущена (тогда Screen Pinning не нужен).
+     */
+    private fun startPhoneLockIfEnabled(timer: TimerState): Boolean {
+        val mode = lockPreferences.mode
+        if (mode == LockMode.NONE) return false
+        if (timer.phase != Phase.WORK) return false
+        val context = getApplication<Application>()
+        if (!LockPermissions.hasPermissionsFor(context, mode)) {
+            emitMessage("Для блокировки телефона выдайте разрешения в разделе «Блокировка» настроек.")
+            return false
+        }
+        val endMs = System.currentTimeMillis() + timer.secondsLeft * 1000L
+        LockEnforcementService.start(context, mode, endMs)
+        return true
+    }
+
+    /** Останавливает сильную блокировку телефона, если она была активна. */
+    private fun stopPhoneLock() {
+        LockEnforcementService.stop(getApplication())
     }
 
     /**
@@ -327,6 +370,7 @@ class StudyDungeonViewModel(
 
         // R13.8: при достижении нулём Фазы_Работы Режим_Фокуса деактивируется.
         if (wasFocus && ts.phase == Phase.BREAK) {
+            stopPhoneLock()
             focusController?.deactivate()
             _uiState.update { it.deactivateFocusMode() }
         }
@@ -339,6 +383,7 @@ class StudyDungeonViewModel(
      */
     private fun handleTimerStopped() {
         if (_uiState.value.focusMode) {
+            stopPhoneLock()
             focusController?.deactivate()
         }
         _uiState.update {
@@ -358,6 +403,7 @@ class StudyDungeonViewModel(
      */
     private fun handleForcedExit() {
         TimerForegroundService.stop(getApplication())
+        stopPhoneLock()
         updateHero(SessionEngine.applySessionFailPenalty(_uiState.value.hero)) // R9.2
         _uiState.update {
             it.deactivateFocusMode().copy(timer = PomodoroEngine.fail(it.timer))

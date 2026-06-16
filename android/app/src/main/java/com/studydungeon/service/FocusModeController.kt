@@ -86,11 +86,21 @@ class FocusModeController(private val activity: ComponentActivity) {
      *
      * Requirements: 13.1, 13.2, 13.3, 13.5, 13.7
      */
-    fun activate(lockDurationSec: Int) {
+    fun activate(lockDurationSec: Int, pinScreen: Boolean = true) {
         this.lockDurationSec = lockDurationSec
 
         // Удерживаем экран включённым на время Режима_Фокуса (R13.5).
         activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Если включена «сильная» блокировка через оверлей/usage-access
+        // ([com.studydungeon.lock.LockEnforcementService]), Screen Pinning не
+        // используется: пользователь жаловался на его подтверждения, а удержание
+        // обеспечивает оверлей. В этом случае не трактуем отсутствие закрепления
+        // как принудительный выход (focusActive остаётся false).
+        if (!pinScreen) {
+            focusActive = false
+            return
+        }
 
         focusActive = true
 
