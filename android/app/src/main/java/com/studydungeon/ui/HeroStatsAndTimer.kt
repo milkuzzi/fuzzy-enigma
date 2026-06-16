@@ -98,7 +98,7 @@ fun HeroStatsPanel(
                     contentAlignment = Alignment.Center
                 ) {
                     PixelIcon(
-                        resId = R.drawable.hero_portrait,
+                        resId = heroPortraitForLevel(hero.level),
                         contentDescription = "Портрет Героя",
                         size = 70.dp
                     )
@@ -114,6 +114,11 @@ fun HeroStatsPanel(
                         text = "Уровень ${hero.level}",
                         style = MaterialTheme.typography.titleSmall,
                         color = Dungeon.Parchment
+                    )
+                    Text(
+                        text = heroRankForLevel(hero.level),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Dungeon.GoldTrim
                     )
                 }
             }
@@ -387,6 +392,23 @@ fun AnimatedHourglass(
 // endregion
 
 // region Helpers (pure presentation mapping)
+
+/**
+ * Спрайт-портрет Героя в зависимости от Уровня: персонаж «прокачивается»
+ * визуально — новичок → бывалый искатель → легендарный герой.
+ */
+fun heroPortraitForLevel(level: Int): Int = when {
+    level >= 6 -> R.drawable.hero_portrait_t3
+    level >= 3 -> R.drawable.hero_portrait_t2
+    else -> R.drawable.hero_portrait
+}
+
+/** Звание Героя по Уровню (отображается под уровнем в панели характеристик). */
+fun heroRankForLevel(level: Int): String = when {
+    level >= 6 -> "Легендарный герой"
+    level >= 3 -> "Бывалый искатель"
+    else -> "Новичок"
+}
 
 /** Безопасное отношение для прогресс-бара в диапазоне [0f, 1f]. */
 private fun ratio(value: Int, total: Int): Float {
