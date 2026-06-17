@@ -281,4 +281,16 @@ object PomodoroEngine {
             phaseEndEpochMs = null,
             completedPomodoros = 0
         )
+
+    /**
+     * Признак того, что Серия уже находится в «свежем» начальном состоянии и
+     * запускать новую Серию не имеет смысла: Таймер остановлен ([RunState.STOPPED]),
+     * прогресс нулевой ([TimerState.completedPomodoros] == 0) и текущая фаза —
+     * [Phase.WORK]. Используется UI/ViewModel, чтобы запретить повторный сброс
+     * уже новой Серии.
+     */
+    fun isFreshSeries(state: TimerState): Boolean =
+        state.runState == RunState.STOPPED &&
+            state.completedPomodoros == 0 &&
+            state.phase == Phase.WORK
 }

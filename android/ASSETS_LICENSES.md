@@ -19,6 +19,9 @@ Ruslan Display и Press Start 2P содержат глифы кириллицы 
 
 ## Спрайты (res/drawable-nodpi)
 
-Пиксель-арт спрайты (`bg_dungeon_wall`, `hero_portrait`, `ic_hp`, `ic_gold`,
-`ic_xp`, `ic_potion`, `ic_scroll`, `ic_hourglass`) сгенерированы специально для
-этого проекта и могут свободно использоваться в рамках репозитория.
+Пиксель-арт спрайты (`bg_dungeon_wall`, `hero_portrait`, `hero_portrait_t2`,
+`hero_portrait_t3`, `ic_hp`, `ic_gold`, `ic_xp`, `ic_potion`, `ic_scroll`,
+`ic_hourglass`) сгенерированы специально для этого проекта и могут свободно
+использоваться в рамках репозитория. Фон спрайтов сделан прозрачным
+(альфа-канал). Портреты `hero_portrait_t2`/`t3` — формы Героя для повышенных
+уровней (система прокачки).

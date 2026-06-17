@@ -1,6 +1,7 @@
 package com.studydungeon.ui
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,9 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.content.ContextCompat
 import com.studydungeon.service.FocusModeController
 
 /**
@@ -66,8 +70,21 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // Запрашиваем POST_NOTIFICATIONS сразу при запуске: постоянное
+        // уведомление Таймера (foreground service) на Android 13+ не появляется
+        // без этого разрешения, а у Фоновой_Службы свой экземпляр
+        // NotificationController без запросчика разрешений.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         setContent {
-            StudyDungeonTheme {
+            val theme by viewModel.themeChoice.collectAsState()
+            val onboardingDone by viewModel.onboardingCompleted.collectAsState()
+            StudyDungeonTheme(theme = theme) {
                 val snackbarHostState = remember { SnackbarHostState() }
                 Box(modifier = Modifier.fillMaxSize()) {
                     // Каменный фон подземелья под всем интерфейсом (R14).
@@ -82,6 +99,11 @@ class MainActivity : ComponentActivity() {
                             snackbarHostState = snackbarHostState,
                             modifier = Modifier.padding(innerPadding)
                         )
+                    }
+                    // Онбординг при первом запуске: показываем поверх UI, пока флаг
+                    // явно не выставлен в true (null — состояние ещё загружается).
+                    if (onboardingDone == false) {
+                        OnboardingScreen(onFinish = viewModel::completeOnboarding)
                     }
                 }
             }

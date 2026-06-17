@@ -5,8 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.studydungeon.R
 import com.studydungeon.data.FileHeroRepository
 import com.studydungeon.data.HeroRepository
+import com.studydungeon.data.SettingsStore
+import com.studydungeon.data.ThemeChoice
 import com.studydungeon.domain.ApplySettingsResult
 import com.studydungeon.domain.Hero
 import com.studydungeon.domain.HeroEngine
@@ -17,15 +20,22 @@ import com.studydungeon.domain.SessionEngine
 import com.studydungeon.domain.ShopCatalog
 import com.studydungeon.domain.ShopItem
 import com.studydungeon.domain.TimerState
+import com.studydungeon.lock.LockMode
+import com.studydungeon.lock.LockPermissions
+import com.studydungeon.lock.LockPreferences
 import com.studydungeon.service.FocusModeController
+import com.studydungeon.service.LockEnforcementService
 import com.studydungeon.service.NotificationController
 import com.studydungeon.service.TimerForegroundService
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -98,12 +108,56 @@ class StudyDungeonViewModel(
      */
     private var rewardedPomodoros: Int = 0
 
+    /** Настройки блокировки телефона (режим + список приложений). */
+    private val lockPreferences = LockPreferences(application)
+
+    /** Типобезопасные настройки приложения и статистика (DataStore). */
+    private val settingsStore = SettingsStore(application)
+
+    /** Выбранная тема оформления (наблюдается Activity для применения темы). */
+    val themeChoice: StateFlow<ThemeChoice> =
+        settingsStore.themeChoice.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeChoice.DARK)
+
+    /** Признак завершённого онбординга (Activity показывает онбординг, если false). */
+    val onboardingCompleted: StateFlow<Boolean?> =
+        settingsStore.onboardingCompleted.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     init {
         // Загрузка сохранённого Героя (R10.2): при отсутствии/повреждении файла
         // репозиторий вернёт Героя по умолчанию (R10.3).
         viewModelScope.launch {
             val hero = repository.load()
             _uiState.update { it.copy(hero = hero) }
+        }
+
+        // Восстановление сохранённых длительностей Таймера (R10).
+        viewModelScope.launch {
+            val savedWork = settingsStore.workDurationSec.first()
+            val savedBreak = settingsStore.breakDurationSec.first()
+            val savedTotal = settingsStore.totalPomodoros.first()
+            _uiState.update {
+                it.copy(
+                    timer = it.timer.copy(
+                        workDurationSec = savedWork,
+                        breakDurationSec = savedBreak,
+                        secondsLeft = savedWork,
+                        totalPomodoros = savedTotal
+                    )
+                )
+            }
+        }
+
+        // Реактивное наблюдение за статистикой (счётчики, серии, история).
+        viewModelScope.launch {
+            settingsStore.stats.collect { snapshot ->
+                _uiState.update {
+                    it.copy(
+                        todayPomodoros = snapshot.today,
+                        totalPomodoros = snapshot.total,
+                        stats = snapshot
+                    )
+                }
+            }
         }
 
         // Наблюдение за состоянием Таймера из фоновой службы (источник истины
@@ -155,6 +209,8 @@ class StudyDungeonViewModel(
             is ApplySettingsResult.Applied -> {
                 _uiState.update { it.copy(timer = result.state) }
                 rewardedPomodoros = 0
+                // Сохраняем выбранные длительности между запусками (R10.1).
+                viewModelScope.launch { settingsStore.saveTimerSettings(workSec, breakSec, total) }
             }
             is ApplySettingsResult.Rejected ->
                 emitMessage("Нельзя менять настройки во время работы таймера")
@@ -179,8 +235,16 @@ class StudyDungeonViewModel(
             timer.totalPomodoros
         )
 
+        // Сильная блокировка телефона (оверлей/блокировка приложений), если
+        // выбрана и выданы разрешения. Если она активна — Screen Pinning не
+        // используем (pinScreen = false).
+        val strongLockActive = startPhoneLockIfEnabled(timer)
+
         // Длительность_Блокировки = длительность Фазы_Работы (R6.6, R13.1).
-        focusController?.activate(SessionEngine.lockDurationSec(timer))
+        focusController?.activate(
+            SessionEngine.lockDurationSec(timer),
+            pinScreen = !strongLockActive
+        )
 
         _uiState.update {
             it.activateFocusMode().copy(timer = it.timer.copy(runState = RunState.RUNNING))
@@ -196,6 +260,7 @@ class StudyDungeonViewModel(
      */
     fun pauseSession() {
         TimerForegroundService.pause(getApplication())
+        stopPhoneLock()
         focusController?.deactivate()
         _uiState.update {
             it.deactivateFocusMode().copy(timer = it.timer.copy(runState = RunState.PAUSED))
@@ -211,6 +276,7 @@ class StudyDungeonViewModel(
      */
     fun giveUp() {
         TimerForegroundService.stop(getApplication())
+        stopPhoneLock()
         focusController?.deactivate()
         // R9.2: провал сессии наносит 15 урона (с сохранением — R10.1).
         updateHero(SessionEngine.applySessionFailPenalty(_uiState.value.hero))
@@ -226,8 +292,34 @@ class StudyDungeonViewModel(
      * Requirements: 8.4
      */
     fun startNewSeries() {
+        // Запрет повторного сброса уже «свежей» Серии (нулевой прогресс, стоп).
+        if (PomodoroEngine.isFreshSeries(_uiState.value.timer)) {
+            emitMessage(getApplication<Application>().getString(R.string.series_already_new))
+            return
+        }
         _uiState.update { it.copy(timer = PomodoroEngine.startNewSeries(it.timer)) }
         rewardedPomodoros = 0
+    }
+
+    /**
+     * Использует предмет Инвентаря по индексу [index]: применяет его эффект и
+     * расходует одну единицу предмета ([ShopCatalog.useItem]). Сохраняет
+     * состояние Героя (R10.1).
+     */
+    fun useItem(index: Int) {
+        val hero = _uiState.value.hero
+        val updated = ShopCatalog.useItem(hero, index)
+        if (updated != hero) updateHero(updated)
+    }
+
+    /** Сохраняет выбранную пользователем тему оформления. */
+    fun setThemeChoice(choice: ThemeChoice) {
+        viewModelScope.launch { settingsStore.setThemeChoice(choice) }
+    }
+
+    /** Отмечает онбординг как завершённый (после первого запуска). */
+    fun completeOnboarding() {
+        viewModelScope.launch { settingsStore.setOnboardingCompleted(true) }
     }
 
     /**
@@ -274,13 +366,9 @@ class StudyDungeonViewModel(
      * Requirements: 13.11
      */
     fun onAppBackgrounded() {
-        val state = _uiState.value
-        if (state.focusMode && state.timer.runState == RunState.RUNNING) {
-            notificationController.notifyReturnReminder(
-                state.timer.secondsLeft,
-                state.hero.currentHp
-            )
-        }
+        // Напоминание о возврате отключено: пользователю нужно только
+        // постоянное уведомление Таймера с кнопкой паузы, без лишних
+        // событийных уведомлений.
     }
 
     /**
@@ -300,7 +388,33 @@ class StudyDungeonViewModel(
         _uiState.update { it.copy(hero = mutated) }
         // Терминальное действие: гарантируем запись до завершения процесса.
         runBlocking { repository.save(mutated) }
+        stopPhoneLock()
         TimerForegroundService.stop(getApplication())
+    }
+
+    /**
+     * Запускает сильную блокировку телефона через [LockEnforcementService],
+     * если пользователь выбрал режим (не [LockMode.NONE]), это Фаза_Работы
+     * и выданы необходимые разрешения. Возвращает true, если блокировка
+     * запущена (тогда Screen Pinning не нужен).
+     */
+    private fun startPhoneLockIfEnabled(timer: TimerState): Boolean {
+        val mode = lockPreferences.mode
+        if (mode == LockMode.NONE) return false
+        if (timer.phase != Phase.WORK) return false
+        val context = getApplication<Application>()
+        if (!LockPermissions.hasPermissionsFor(context, mode)) {
+            emitMessage("Для блокировки телефона выдайте разрешения в разделе «Блокировка» настроек.")
+            return false
+        }
+        val endMs = System.currentTimeMillis() + timer.secondsLeft * 1000L
+        LockEnforcementService.start(context, mode, endMs)
+        return true
+    }
+
+    /** Останавливает сильную блокировку телефона, если она была активна. */
+    private fun stopPhoneLock() {
+        LockEnforcementService.stop(getApplication())
     }
 
     /**
@@ -318,6 +432,8 @@ class StudyDungeonViewModel(
             while (rewardedPomodoros < ts.completedPomodoros) {
                 hero = SessionEngine.applyWorkSuccessReward(hero) // R7.6, R8.1 (атомарно)
                 rewardedPomodoros++
+                // Учёт в истории статистики; UI обновится через наблюдение stats.
+                viewModelScope.launch { settingsStore.recordCompletedPomodoro() }
             }
             updateHero(hero) // R10.1
         }
@@ -327,6 +443,7 @@ class StudyDungeonViewModel(
 
         // R13.8: при достижении нулём Фазы_Работы Режим_Фокуса деактивируется.
         if (wasFocus && ts.phase == Phase.BREAK) {
+            stopPhoneLock()
             focusController?.deactivate()
             _uiState.update { it.deactivateFocusMode() }
         }
@@ -339,6 +456,7 @@ class StudyDungeonViewModel(
      */
     private fun handleTimerStopped() {
         if (_uiState.value.focusMode) {
+            stopPhoneLock()
             focusController?.deactivate()
         }
         _uiState.update {
@@ -358,6 +476,7 @@ class StudyDungeonViewModel(
      */
     private fun handleForcedExit() {
         TimerForegroundService.stop(getApplication())
+        stopPhoneLock()
         updateHero(SessionEngine.applySessionFailPenalty(_uiState.value.hero)) // R9.2
         _uiState.update {
             it.deactivateFocusMode().copy(timer = PomodoroEngine.fail(it.timer))

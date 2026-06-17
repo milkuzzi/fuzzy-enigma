@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome variant for Android 13+ themed icons: hourglass silhouette only. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,33 h40 a2,2 0 0 1 2,2 v3 a2,2 0 0 1 -2,2 h-40 a2,2 0 0 1 -2,-2 v-3 a2,2 0 0 1 2,-2 z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,68 h40 a2,2 0 0 1 2,2 v3 a2,2 0 0 1 -2,2 h-40 a2,2 0 0 1 -2,-2 v-3 a2,2 0 0 1 2,-2 z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,41 L68,41 L54,54 L68,67 L40,67 L54,54 Z" />
+</vector>

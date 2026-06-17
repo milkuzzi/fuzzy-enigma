@@ -15,8 +15,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.studydungeon.R
 import com.studydungeon.domain.Debuff
 import com.studydungeon.domain.Hero
 import com.studydungeon.domain.Phase
@@ -49,6 +51,7 @@ fun StudyDungeonScreen(
     onStartNewSeries: () -> Unit = {},
     onApplySettings: (workSec: Int, breakSec: Int, total: Int) -> Unit = { _, _, _ -> },
     onPurchase: (com.studydungeon.domain.ShopItem) -> Unit = {},
+    onUseItem: (index: Int) -> Unit = {},
     onToggleSection: (Section) -> Unit = {}
 ) {
     // Локальное состояние анимации успеха: поднимается при росте числа
@@ -98,8 +101,11 @@ fun StudyDungeonScreen(
         // Режиме_Фокуса секции скрыты целиком (R13.6): видимость берётся из
         // uiState, переключение — через onToggleSection.
         if (!uiState.focusMode) {
+            // Статистика: счётчики, серии (streak) и графики по дням/неделям.
+            StatisticsPanel(stats = uiState.stats)
+
             CollapsibleSection(
-                title = "Настройки",
+                title = stringResource(R.string.section_settings),
                 expanded = uiState.isSectionVisible(Section.SETTINGS),
                 onToggle = { onToggleSection(Section.SETTINGS) }
             ) {
@@ -107,10 +113,13 @@ fun StudyDungeonScreen(
                     timer = uiState.timer,
                     onApply = onApplySettings
                 )
+                LockSettingsContent(
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
 
             CollapsibleSection(
-                title = "Магазин",
+                title = stringResource(R.string.section_shop),
                 expanded = uiState.isSectionVisible(Section.SHOP),
                 onToggle = { onToggleSection(Section.SHOP) }
             ) {
@@ -121,11 +130,14 @@ fun StudyDungeonScreen(
             }
 
             CollapsibleSection(
-                title = "Инвентарь",
+                title = stringResource(R.string.section_inventory),
                 expanded = uiState.isSectionVisible(Section.INVENTORY),
                 onToggle = { onToggleSection(Section.INVENTORY) }
             ) {
-                InventorySectionContent(hero = uiState.hero)
+                InventorySectionContent(
+                    hero = uiState.hero,
+                    onUse = onUseItem
+                )
             }
         }
     }
@@ -165,6 +177,7 @@ fun StudyDungeonScreen(
         onStartNewSeries = viewModel::startNewSeries,
         onApplySettings = viewModel::applySettings,
         onPurchase = viewModel::purchase,
+        onUseItem = viewModel::useItem,
         onToggleSection = viewModel::toggleSection
     )
 }

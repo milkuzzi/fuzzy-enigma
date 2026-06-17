@@ -9,6 +9,22 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Keep timing fidelity across Doze -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Haptic feedback on phase changes (toggleable in settings) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Phone-lock features (Focus To-do style, no Device Owner): overlay full
+         lock + per-app blocking via usage access -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Needed to list launchable apps for the per-app block picker (Android 11+) -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -41,6 +57,35 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="pomodoro_study_timer" />
         </service>
+
+        <!-- Foreground service enforcing phone lock during focus (overlay / per-app) -->
+        <service
+            android:name=".service.LockEnforcementService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="focus_phone_lock" />
+        </service>
+
+        <!-- Notification access used to suppress notifications during full lock -->
+        <service
+            android:name=".service.StudyNotificationListener"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Fullscreen "access denied" screen for blocked apps (per-app mode) -->
+        <activity
+            android:name=".ui.BlockedAccessActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.StudyDungeon" />
 
     </application>
 

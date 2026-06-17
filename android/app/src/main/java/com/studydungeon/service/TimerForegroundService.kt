@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
 class TimerForegroundService : Service() {
 
     private lateinit var notificationController: NotificationController
+    private lateinit var feedback: SessionFeedback
 
     /** Скоуп службы для тикера; завершается в [onDestroy]. */
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -72,6 +73,7 @@ class TimerForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         notificationController = NotificationController(applicationContext)
+        feedback = SessionFeedback(applicationContext)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -80,6 +82,7 @@ class TimerForegroundService : Service() {
         when (intent?.action) {
             ACTION_START -> handleStart(intent)
             ACTION_PAUSE -> handlePause()
+            ACTION_RESUME -> handleResume()
             ACTION_STOP -> handleStop()
             else -> {
                 // Перезапуск службы системой без сохранённого намерения: без
@@ -156,6 +159,21 @@ class TimerForegroundService : Service() {
         notificationController.updateTimerNotification(paused)
     }
 
+    /**
+     * Возобновляет ранее приостановленный Таймер (кнопка «Продолжить» в
+     * уведомлении). Сохранённое при паузе оставшееся время снова
+     * превращается в phaseEndEpochMs от текущего момента.
+     */
+    private fun handleResume() {
+        val current = _timerState.value ?: return
+        if (current.runState == RunState.RUNNING) return
+        val running = PomodoroEngine.start(current, System.currentTimeMillis())
+        publish(running)
+        val notification = notificationController.buildTimerNotification(running)
+        startForegroundCompat(notification)
+        startTicker()
+    }
+
     /** Останавливает Таймер, снимает уведомление и завершает службу. */
     private fun handleStop() {
         val current = _timerState.value
@@ -185,18 +203,20 @@ class TimerForegroundService : Service() {
                     is TickResult.WorkCompleted -> {
                         accumulateWorkReward()
                         publish(result.state)
-                        notificationController.notifyBreakStarted()
+                        feedback.onPhaseChange()
+                        // Только постоянное уведомление Таймера — без отдельных
+                        // событийных уведомлений (по требованию пользователя).
                         notificationController.updateTimerNotification(result.state)
                     }
                     is TickResult.BreakCompleted -> {
                         publish(result.state)
-                        notificationController.notifyWorkStarted()
+                        feedback.onPhaseChange()
                         notificationController.updateTimerNotification(result.state)
                     }
                     is TickResult.SeriesCompleted -> {
                         accumulateWorkReward()
                         publish(result.state)
-                        notificationController.notifySeriesCompleted(accumulatedXp, accumulatedGold)
+                        feedback.onSeriesCompleted()
                         // Серия завершена — отсчёт прекращаем и сворачиваем службу.
                         stopService()
                         return@launch
@@ -275,6 +295,9 @@ class TimerForegroundService : Service() {
         /** Действие: приостановить Таймер. */
         const val ACTION_PAUSE = "com.studydungeon.service.action.PAUSE"
 
+        /** Действие: возобновить приостановленный Таймер. */
+        const val ACTION_RESUME = "com.studydungeon.service.action.RESUME"
+
         /** Действие: остановить Таймер и завершить службу. */
         const val ACTION_STOP = "com.studydungeon.service.action.STOP"
 
@@ -337,6 +360,14 @@ class TimerForegroundService : Service() {
         fun pause(context: Context) {
             val intent = Intent(context, TimerForegroundService::class.java).apply {
                 action = ACTION_PAUSE
+            }
+            ContextCompatStartForegroundService(context, intent)
+        }
+
+        /** Возобновляет приостановленный Таймер. */
+        fun resume(context: Context) {
+            val intent = Intent(context, TimerForegroundService::class.java).apply {
+                action = ACTION_RESUME
             }
             ContextCompatStartForegroundService(context, intent)
         }
